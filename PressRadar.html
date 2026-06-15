@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PressRadar</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.1/dist/globe.gl.min.js"></script>
+<style>
+:root{
+  --bg:#080c08;--surface:#0e120e;--surface2:#131813;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.11);
+  --text:#e2e8e2;--muted:#617561;
+  --accent:#3ddc6e;--accent2:#1a6e38;--dim:rgba(61,220,110,.08);
+  --red:#e55;--amber:#d4a017;--blue:#4a9eff;--purple:#b464ff;
+  --font:system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+}
+body.light-theme{
+  --bg:#f0f4f0;--surface:#e4ebe4;--surface2:#d8e2d8;
+  --border:rgba(0,0,0,.09);--border2:rgba(0,0,0,.15);
+  --text:#1a221a;--muted:#5a7a5a;
+  --accent:#1a8f42;--accent2:#0d5c2a;--dim:rgba(26,143,66,.08);
+  --red:#cc2222;--amber:#a07010;--blue:#1a6acc;--purple:#7030cc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;display:flex;flex-direction:column}
+#page-wrap{display:flex;flex-direction:column;flex:1;overflow-y:auto;overflow-x:hidden}
+#page-wrap::-webkit-scrollbar{width:4px}
+#page-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#top-section{height:100vh;min-height:100vh;display:flex;flex-direction:column;flex-shrink:0}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:44px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);z-index:30}
+.logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;letter-spacing:-.02em}
+.logo-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.tpills{display:flex;align-items:center;gap:4px}
+.pill{padding:2px 9px;border-radius:999px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.pill:hover,.pill.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+.livebadge{font-size:10px;color:var(--accent);font-family:var(--mono);display:flex;align-items:center;gap:4px}
+.livebadge::before{content:'';width:5px;height:5px;background:var(--accent);border-radius:50%;animation:blink 1.4s infinite}
+
+/* ── 3-COLUMN MAIN ── */
+.main{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ── LEFT: NEWS ── */
+.col-news{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+
+/* news filter bar */
+.nfilter{flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.nf-srch{padding:7px 9px;border-bottom:1px solid var(--border)}
+.nf-srch input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:11px;outline:none}
+.nf-srch input:focus{border-color:var(--accent)}
+.nf-srch input::placeholder{color:var(--muted)}
+.nf-tabs{display:flex;overflow-x:auto;padding:4px 8px;gap:4px}
+.nf-tabs::-webkit-scrollbar{height:2px}
+.nftab{padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.nftab.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+.nf-cont{display:flex;gap:4px;padding:4px 8px 6px;overflow-x:auto}
+.nf-cont::-webkit-scrollbar{height:2px}
+.nfcbtn{padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.nfcbtn.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+
+/* news source bar */
+.srcbar{display:flex;gap:4px;padding:4px 8px;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.srcbar::-webkit-scrollbar{height:2px}
+.sbtn2{padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:3px}
+.sbtn2:hover{border-color:var(--border2);color:var(--text)}.sbtn2.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+.sdot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.sst{font-size:9px;padding:0 4px;border-radius:2px;font-family:var(--mono)}
+.sst.ok{background:rgba(61,220,110,.1);color:var(--accent)}.sst.err{background:rgba(229,85,85,.1);color:var(--red)}.sst.pend{background:rgba(213,160,23,.1);color:var(--amber)}
+
+/* feed */
+.feed{flex:1;overflow-y:auto;min-height:0}
+.feed-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5}
+.feed-hdr-t{font-size:11px;font-weight:500;display:flex;align-items:center;gap:5px}
+.cbadge{background:var(--dim);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:999px;font-family:var(--mono)}
+
+/* article card */
+.ac{padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+.ac:hover{background:var(--surface)}.ac.sel{background:var(--surface2);border-left:2px solid var(--accent)}
+.acm{display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap}
+.abadge{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600;font-family:var(--mono)}
+.ab-gu{background:rgba(61,220,110,.1);color:var(--accent)}.ab-g{background:rgba(74,158,255,.12);color:var(--blue)}
+.ab-n{background:rgba(180,100,255,.12);color:var(--purple)}.ab-r{background:rgba(213,160,23,.12);color:var(--amber)}
+.ab-h{background:rgba(255,102,0,.12);color:#ff6600}
+.ctag{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:500}
+.t-world,.t-international,.t-news{background:rgba(213,160,23,.1);color:var(--amber)}
+.t-technology,.t-tech{background:rgba(74,158,255,.1);color:var(--blue)}
+.t-business,.t-money{background:rgba(61,220,110,.09);color:var(--accent)}
+.t-health{background:rgba(229,85,85,.1);color:var(--red)}
+.t-politics{background:rgba(255,150,50,.1);color:#ff9632}
+.t-sports,.t-sport{background:rgba(50,200,200,.1);color:#32c8c8}
+.t-culture,.t-entertainment{background:rgba(255,100,200,.1);color:#ff64c8}
+.t-environment,.t-climate,.t-science{background:rgba(100,200,80,.1);color:#64c850}
+.ago{font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:auto}
+.atit{font-size:11px;font-weight:500;line-height:1.4;margin-bottom:2px}
+.adsc{font-size:10px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ── CENTRE: GLOBE ── */
+.col-globe{flex:1;position:relative;background:#03060f;overflow:hidden;min-width:0}
+#globe-container{position:absolute;inset:0;width:100%;height:100%}
+#globe-container canvas{display:block}
+.gov{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:2}
+.gst{background:rgba(2,6,16,.88);border:1px solid rgba(61,180,255,.16);border-radius:8px;padding:6px 12px;backdrop-filter:blur(8px)}
+.gsv{font-size:18px;font-weight:700;font-family:var(--mono);color:#3dbdff;text-shadow:0 0 12px rgba(61,189,255,.4)}
+.gsl{font-size:9px;color:#4a7a9a;text-transform:uppercase;letter-spacing:.08em}
+.gctrl{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:5px;z-index:2}
+.gbtn{background:rgba(2,6,16,.88);border:1px solid rgba(61,180,255,.16);border-radius:6px;padding:4px 10px;color:#4a7a9a;font-size:10px;cursor:pointer;pointer-events:all;backdrop-filter:blur(4px)}
+.gbtn:hover{color:var(--text)}.gbtn.on{color:var(--accent);border-color:var(--accent2)}
+.ghl{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(2,6,16,.9);border:1px solid rgba(61,180,255,.16);border-radius:8px;padding:8px 14px;max-width:460px;width:90%;text-align:center;backdrop-filter:blur(8px);pointer-events:none;z-index:2}
+.ghll{font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
+.ghlt{font-size:11px;font-weight:500;line-height:1.4;color:var(--text)}
+/* Globe legend */
+.globe-legend{position:absolute;bottom:52px;right:10px;display:flex;flex-direction:column;gap:4px;pointer-events:none;z-index:2}
+.gl-item{display:flex;align-items:center;gap:5px;font-size:9px;color:#4a7a9a;font-family:var(--mono)}
+.gl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* Alert tooltip */
+.globe-tooltip{position:absolute;pointer-events:none;z-index:99;background:rgba(2,6,16,.95);border:1px solid rgba(61,180,255,.2);border-radius:6px;padding:6px 10px;font-size:10px;color:var(--text);max-width:220px;line-height:1.4;display:none}
+
+/* ── RIGHT: TV ── */
+.col-tv{width:280px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.tv-favs{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tv-fav{flex:1;display:flex;flex-direction:column;overflow:hidden;border-bottom:1px solid var(--border)}
+.tv-fav:last-child{border-bottom:none}
+.tv-fav-vw{flex:1;position:relative;background:#000;overflow:hidden}
+.tv-fav-vw video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.tv-hdr{padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.tv-hdr-t{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+/* favorite channels (top 3 always visible) */
+.tv-favs{flex:1 1 auto;min-height:0;border-bottom:2px solid var(--accent2);overflow:hidden}
+.tv-fav{flex:1 1 0;min-height:0;border-bottom:1px solid var(--border);position:relative;display:flex;flex-direction:column;overflow:hidden}
+.tv-fav:last-child{border-bottom:none}
+.tv-fav-hdr{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tv-fav-name{font-size:10px;font-weight:600;flex:1}
+.tv-fav-st{font-size:9px;font-family:var(--mono)}
+.tv-fav-st.live{color:var(--accent)}.tv-fav-st.loading{color:var(--amber)}.tv-fav-st.err{color:var(--red)}
+.tv-fav-vw{flex:1 1 auto;min-height:0;position:relative;background:#000;overflow:hidden;aspect-ratio:auto;max-height:none}
+.tv-fav-vw video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.tv-fav-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface2);font-size:9px;color:var(--muted);flex-direction:column;gap:4px}
+
+/* more channels list */
+/* tv-more, tv-ch-item CSS removed — list replaced by TV browser section */
+.tv-ch-meta{font-size:9px;color:var(--muted)}
+.tv-star{font-size:11px;cursor:pointer;padding:0 2px;opacity:.5}
+.tv-star.on{opacity:1;color:var(--accent)}
+
+/* ── STATS BAR ── */
+.statsbar{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.stc{padding:4px 12px;border-right:1px solid var(--border)}
+.stc:last-child{border-right:none}
+.stv{font-size:14px;font-weight:600;font-family:var(--mono);color:var(--accent)}
+.stl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── MODAL ── */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center}
+.mbg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;max-width:420px;width:92%}
+.mtit{font-size:13px;font-weight:600;margin-bottom:5px}
+.mbod{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.mbod a{color:var(--accent)}
+.arow{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.albl{font-size:10px;color:var(--muted);min-width:80px}
+.ainp{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-size:11px;font-family:var(--mono);outline:none}
+.ainp:focus{border-color:var(--accent)}
+.anote{font-size:9px;color:var(--muted);margin-bottom:8px;padding-left:87px}
+.anote a{color:var(--accent)}
+.mfoot{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
+.mcanc{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.mok{background:var(--accent);color:#000;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+.mok:hover{opacity:.85}
+
+/* ── UTIL ── */
+.skel{background:var(--surface);border-radius:3px;animation:shim 1.5s infinite}
+@keyframes shim{0%{opacity:.4}50%{opacity:.7}100%{opacity:.4}}
+.cmsg{display:flex;align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:8px;color:var(--muted);font-size:11px}
+
+/* ── TV BROWSER SECTION ── */
+#tv-browser{height:100vh;min-height:100vh;background:var(--bg);border-top:2px solid var(--accent2);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.tvb-hdr{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap;flex-shrink:0}
+.tvb-title{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tvb-title::before{content:'';width:6px;height:6px;background:var(--accent);border-radius:50%;animation:blink 1.5s infinite}
+.tvb-layouts{display:flex;gap:3px}
+.tvb-lbtn{padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-weight:500}
+.tvb-lbtn.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+
+/* two-panel body */
+.tvb-body{display:flex;flex:1 1 auto;min-height:0;height:auto}
+
+/* LEFT: screen slots */
+.tvb-screens{flex:1 1 auto;display:grid;gap:4px;padding:8px;background:var(--bg);min-width:0;min-height:0;overflow:hidden}
+.tvb-screens.s2{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr}
+.tvb-screens.s4{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
+.tvb-screens.s6{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+
+/* individual slot */
+.tvb-slot{background:var(--surface2);border:2px solid var(--border);border-radius:7px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:border-color .15s;position:relative;min-height:0}
+.tvb-slot:hover{border-color:var(--border2)}
+.tvb-slot.focused{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent2)}
+.tvb-slot.focused .tvb-slot-hdr{background:rgba(61,220,110,.08)}
+.tvb-focus-badge{font-size:9px;color:var(--accent);font-family:var(--mono);margin-right:2px;display:none}
+.tvb-slot.focused .tvb-focus-badge{display:inline}
+.tvb-slot.live{border-color:var(--accent2)}
+.tvb-slot-hdr{display:flex;align-items:center;gap:5px;padding:4px 7px;background:var(--surface);flex-shrink:0;font-size:10px;border-bottom:1px solid var(--border)}
+.tvb-slot-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.tvb-slot-name.live{color:var(--text);font-weight:500}
+.tvb-slot-st{font-size:9px;font-family:var(--mono)}
+.tvb-slot-st.live{color:var(--accent)}.tvb-slot-st.loading{color:var(--amber)}.tvb-slot-st.err{color:var(--red)}
+.tvb-slot-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;flex-shrink:0}
+.tvb-slot-close:hover{color:var(--red)}
+.tvb-slot-vw{flex:1;position:relative;background:#000;min-height:0}
+.tvb-slot-vw video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.tvb-slot-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted)}
+.tvb-slot-ph-icon{font-size:22px;opacity:.2}
+.tvb-slot-ph-txt{font-size:10px;text-align:center;line-height:1.4}
+
+/* RIGHT: channel picker */
+.tvb-picker{width:260px;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;background:var(--surface);min-height:0}
+.tvb-picker-hdr{padding:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tvb-srch{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px}
+.tvb-srch:focus{border-color:var(--accent)}
+.tvb-srch::placeholder{color:var(--muted)}
+.tvb-cats{display:flex;gap:3px;flex-wrap:wrap}
+.tvb-cat{padding:2px 7px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:9px;cursor:pointer;white-space:nowrap}
+.tvb-cat.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+.tvb-picker-list{flex:1;overflow-y:auto;min-height:0}
+.tvb-picker-list::-webkit-scrollbar{width:3px}
+.tvb-picker-list::-webkit-scrollbar-thumb{background:var(--border2)}
+.tvb-pick-item{display:flex;align-items:center;gap:7px;padding:5px 10px;cursor:pointer;border-bottom:1px solid var(--border)}
+.tvb-pick-item:hover{background:var(--surface2)}
+.tvb-pick-item.fav-item{background:rgba(61,220,110,.03)}
+.tvb-pick-logo{width:20px;height:20px;border-radius:3px;object-fit:contain;background:var(--surface2);flex-shrink:0}
+.tvb-pick-ph{width:20px;height:20px;border-radius:3px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.tvb-pick-name{font-size:11px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tvb-pick-meta{font-size:9px;color:var(--muted)}
+
+/* scroll anchor */
+.scroll-to-tv{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:6px;background:var(--surface);border-top:1px solid var(--border);cursor:pointer;font-size:10px;color:var(--muted);transition:color .15s;flex-shrink:0}
+.scroll-to-tv:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="page-wrap">
+<div id="top-section">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div><span>PressRadar</span><span class="logo-sub" style="margin-left:4px">Global Intelligence</span></div>
+  <div class="tpills">
+    <div class="livebadge" id="live-ind">LIVE</div>
+    <span id="top-clock" style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;padding:0 6px"></span>
+    <button class="pill" onclick="openModal()">⚙ Keys</button>
+    <button class="pill" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark theme">◑ Dark</button>
+  </div>
+</div>
+
+<!-- MAIN 3-COL -->
+<div class="main">
+
+  <!-- ═══ LEFT: NEWS ═══ -->
+  <div class="col-news">
+    <!-- filters -->
+    <div class="nfilter">
+      <div class="nf-srch"><input id="q" type="text" placeholder="Search headlines…"/></div>
+      <!-- Topic tabs -->
+      <div class="nf-tabs">
+        <button class="nftab on" onclick="setTopic('',this)">All</button>
+        <button class="nftab" onclick="setTopic('world',this)">World</button>
+        <button class="nftab" onclick="setTopic('technology',this)">Tech</button>
+        <button class="nftab" onclick="setTopic('business',this)">Business</button>
+        <button class="nftab" onclick="setTopic('politics',this)">Politics</button>
+        <button class="nftab" onclick="setTopic('science',this)">Science</button>
+        <button class="nftab" onclick="setTopic('health',this)">Health</button>
+        <button class="nftab" onclick="setTopic('sports',this)">Sports</button>
+        <button class="nftab" onclick="setTopic('culture',this)">Culture</button>
+        <button class="nftab" onclick="setTopic('environment',this)">Environment</button>
+      </div>
+      <!-- Continent filter -->
+      <div class="nf-cont">
+        <button class="nfcbtn on" onclick="setContinent('',this)">🌐 Global</button>
+        <button class="nfcbtn" onclick="setContinent('africa',this)">🌍 Africa</button>
+        <button class="nfcbtn" onclick="setContinent('asia',this)">🌏 Asia</button>
+        <button class="nfcbtn" onclick="setContinent('europe',this)">🌍 Europe</button>
+        <button class="nfcbtn" onclick="setContinent('americas',this)">🌎 Americas</button>
+        <button class="nfcbtn" onclick="setContinent('middleeast',this)">🕌 M. East</button>
+        <button class="nfcbtn" onclick="setContinent('oceania',this)">🌏 Oceania</button>
+      </div>
+    </div>
+    <!-- source bar -->
+    <div class="srcbar">
+      <button class="sbtn2 on" id="sb-all" onclick="setSrc('all',this)"><span class="sdot" style="background:var(--accent)"></span>All</button>
+      <button class="sbtn2" id="sb-guardian" onclick="setSrc('guardian',this)"><span class="sdot" style="background:var(--blue)"></span>Guardian <span id="st-guardian" class="sst pend">—</span></button>
+      <button class="sbtn2" id="sb-gnews" onclick="setSrc('gnews',this)"><span class="sdot" style="background:var(--purple)"></span>GNews <span id="st-gnews" class="sst pend">—</span></button>
+      <button class="sbtn2" id="sb-newsdata" onclick="setSrc('newsdata',this)"><span class="sdot" style="background:var(--accent)"></span>Newsdata <span id="st-newsdata" class="sst pend">—</span></button>
+      <button class="sbtn2" id="sb-rss" onclick="setSrc('rss',this)"><span class="sdot" style="background:var(--amber)"></span>RSS Feeds <span id="st-rss" class="sst ok">FREE</span></button>
+      <button class="sbtn2" id="sb-hn" onclick="setSrc('hn',this)"><span class="sdot" style="background:#ff6600"></span>HN <span id="st-hn" class="sst ok">FREE</span></button>
+      <button class="sbtn2" id="sb-usgs" onclick="setSrc('usgs',this)"><span class="sdot" style="background:var(--red)"></span>Earthquakes <span id="st-usgs" class="sst ok">FREE</span></button>
+      <button class="sbtn2" id="sb-nasa" onclick="setSrc('nasa',this)"><span class="sdot" style="background:#ff9632"></span>NASA <span id="st-nasa" class="sst ok">FREE</span></button>
+    </div>
+    <!-- feed -->
+    <div class="feed" id="feed">
+      <div class="feed-hdr">
+        <div class="feed-hdr-t">Headlines <span class="cbadge" id="fc">0</span></div>
+      </div>
+      <div id="art-con"><div class="cmsg">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ CENTRE: GLOBE ═══ -->
+  <div class="col-globe">
+    <div id="globe-container"></div>
+    <div class="gov">
+      <div class="gst"><div class="gsv" id="g-a">—</div><div class="gsl">Articles</div></div>
+      <div class="gst"><div class="gsv" id="g-s">—</div><div class="gsl">Outlets</div></div>
+      <div class="gst"><div class="gsv" id="g-c">—</div><div class="gsl">Last hour</div></div>
+    </div>
+    <div class="gctrl">
+      <button class="gbtn on" id="gbtn-rot" onclick="toggleRot()">⟳ Spinning</button>
+      <button class="gbtn" id="gbtn-alerts" onclick="toggleAlerts()" style="margin-top:2px">◉ Alerts</button>
+    </div>
+    <div class="globe-legend">
+      <div class="gl-item"><div class="gl-dot" style="background:#e55"></div>Earthquake</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#ff9632"></div>NASA Event</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#3ddc6e"></div>News Hub</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#4a9eff"></div>Breaking</div>
+    </div>
+    <div class="globe-tooltip" id="globe-tooltip"></div>
+    <div class="ghl" id="ghl" style="display:none">
+      <div class="ghll">● latest headline</div>
+      <div class="ghlt" id="ghlt"></div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT: TV ═══ -->
+  <div class="col-tv">
+    <div class="tv-hdr">
+      <span class="tv-hdr-t">📺 Live TV</span>
+      <span id="tv-ch-badge" style="font-size:9px;color:var(--muted);font-family:var(--mono)"></span>
+    </div>
+
+    <!-- TOP 3 ALWAYS-ON FAVS -->
+    <div class="tv-favs" id="tv-favs">
+      <!-- Bloomberg -->
+      <div class="tv-fav">
+        <div class="tv-fav-hdr">
+          <span>🇺🇸</span><span class="tv-fav-name">Bloomberg TV</span>
+          <span class="tv-fav-st loading" id="fst-bloomberg">● …</span>
+        </div>
+        <div class="tv-fav-vw">
+          <div class="tv-fav-ph" id="fph-bloomberg">Connecting…</div>
+          <video id="fv-bloomberg" autoplay muted playsinline controls style="display:none;width:100%;height:100%"></video>
+        </div>
+      </div>
+      <!-- Sky News -->
+      <div class="tv-fav">
+        <div class="tv-fav-hdr">
+          <span>🇬🇧</span><span class="tv-fav-name">Sky News</span>
+          <span class="tv-fav-st loading" id="fst-skynews">● …</span>
+        </div>
+        <div class="tv-fav-vw">
+          <div class="tv-fav-ph" id="fph-skynews">Connecting…</div>
+          <video id="fv-skynews" autoplay muted playsinline controls style="display:none;width:100%;height:100%"></video>
+        </div>
+      </div>
+      <!-- Euronews -->
+      <div class="tv-fav">
+        <div class="tv-fav-hdr">
+          <span>🇪🇺</span><span class="tv-fav-name">Euronews</span>
+          <span class="tv-fav-st loading" id="fst-euronews">● …</span>
+        </div>
+        <div class="tv-fav-vw">
+          <div class="tv-fav-ph" id="fph-euronews">Connecting…</div>
+          <video id="fv-euronews" autoplay muted playsinline controls style="display:none;width:100%;height:100%"></video>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- STATS BAR -->
+<div class="statsbar">
+  <div class="stc"><div class="stv" id="st-art">—</div><div class="stl">Articles</div></div>
+  <div class="stc"><div class="stv" id="st-src">—</div><div class="stl">Outlets</div></div>
+  <div class="stc"><div class="stv" id="st-ctr">—</div><div class="stl">Last hour</div></div>
+  <div class="stc"><div class="stv" id="st-upd">—</div><div class="stl">Updated</div></div>
+</div><!-- /statsbar -->
+
+<!-- SCROLL ANCHOR -->
+<div class="scroll-to-tv" onclick="document.getElementById('tv-browser').scrollIntoView({behavior:'smooth'})">
+  📺 Live TV Browser &nbsp;↓
+</div>
+
+</div><!-- /top-section -->
+
+<!-- TV BROWSER SECTION -->
+<div id="tv-browser">
+  <div class="tvb-hdr">
+    <span class="tvb-title">Live TV Wall</span>
+    <div class="tvb-layouts">
+      <button class="tvb-lbtn on" onclick="setTVBLayout(2,this)">2 screens</button>
+      <button class="tvb-lbtn" onclick="setTVBLayout(4,this)">4 screens</button>
+      <button class="tvb-lbtn" onclick="setTVBLayout(6,this)">6 screens</button>
+    </div>
+    <span style="font-size:10px;color:var(--muted);margin-left:8px">Click a screen → pick a channel from the list →</span>
+  </div>
+  <!-- two-panel: screens left, picker right -->
+  <div class="tvb-body">
+    <!-- SCREEN SLOTS -->
+    <div class="tvb-screens" id="tvb-screens"></div>
+    <!-- CHANNEL PICKER -->
+    <div class="tvb-picker" id="tvb-picker">
+      <div class="tvb-picker-hdr">
+        <input class="tvb-srch" id="tvb-q" type="text" placeholder="Search channels…"/>
+        <div class="tvb-cats" id="tvb-cats"></div>
+      </div>
+      <div class="tvb-picker-list" id="tvb-picker-list">
+        <div class="cmsg">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<!-- MODAL -->
+<div class="mbg" id="modal">
+  <div class="modal">
+    <div class="mtit">API Keys — Connect news sources</div>
+    <div class="mbod">Google News &amp; Hacker News work with <strong>zero signup</strong>. The rest have free tiers.</div>
+    <div class="arow"><span class="albl">🔵 Guardian</span><input class="ainp" id="k-guardian" placeholder="test (works without a key)"/></div>
+    <div class="anote">Free: 5,000 req/day · full text → <a href="https://open-platform.theguardian.com/" target="_blank">open-platform.theguardian.com</a></div>
+    <div class="arow"><span class="albl">🟣 GNews</span><input class="ainp" id="k-gnews" placeholder="your gnews.io token"/></div>
+    <div class="anote">Free: 100 req/day → <a href="https://gnews.io" target="_blank">gnews.io</a></div>
+    <div class="arow"><span class="albl">🟢 Newsdata</span><input class="ainp" id="k-newsdata" placeholder="pub_xxxxxxxx"/></div>
+    <div class="anote">Free: 200 req/day → <a href="https://newsdata.io" target="_blank">newsdata.io</a></div>
+    <div class="arow"><span class="albl">🟡 Google RSS</span><input class="ainp" value="No key — RSS via rss2json" disabled style="opacity:.4"/></div>
+    <div class="arow"><span class="albl">🟠 HN</span><input class="ainp" value="No key — Algolia API" disabled style="opacity:.4"/></div>
+    <div class="mfoot">
+      <button class="mcanc" onclick="closeModal()">Cancel</button>
+      <button class="mok" onclick="saveKeys()">Save & Fetch →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// KEYS / STATE
+// ═══════════════════════════════════════════════════════════════════
+const LS=localStorage;
+let keys={guardian:LS.getItem('pm_g')||'test',gnews:LS.getItem('pm_gn')||'',newsdata:LS.getItem('pm_nd')||''};
+let allArticles=[],filtered=[];
+let curTopic='',curContinent='',curSrc='all',selIdx=-1,q='';
+
+// continent → guardian sections / gnews topics / google rss topics
+const CONTINENT_COUNTRIES={
+  africa:['za','ng','ke','et','gh','tz','ma','dz','eg','sd','ly'],
+  asia:['in','jp','cn','kr','pk','bd','id','af','ir','vn','th','my','ph'],
+  europe:['gb','fr','de','it','es','pt','nl','se','no','pl','ua','gr','ro','hu','cz','at','ch','be','ru'],
+  americas:['us','ca','br','ar','mx','co','cl','pe','ve'],
+  middleeast:['sa','ae','iq','sy','lb','jo','il','tr','qa','kw','bh'],
+  oceania:['au','nz','pg','fj'],
+};
+
+// ── MODAL ──
+function openModal(){
+  document.getElementById('k-guardian').value=keys.guardian==='test'?'':keys.guardian;
+  document.getElementById('k-gnews').value=keys.gnews;
+  document.getElementById('k-newsdata').value=keys.newsdata;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveKeys(){
+  keys.guardian=document.getElementById('k-guardian').value.trim()||'test';
+  keys.gnews=document.getElementById('k-gnews').value.trim();
+  keys.newsdata=document.getElementById('k-newsdata').value.trim();
+  LS.setItem('pm_g',keys.guardian);LS.setItem('pm_gn',keys.gnews);LS.setItem('pm_nd',keys.newsdata);
+  closeModal();fetchAll();
+}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+// ── FILTERS ──
+function setTopic(t,btn){
+  curTopic=t;
+  document.querySelectorAll('.nftab').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');fetchAll();
+}
+function setContinent(c,btn){
+  curContinent=c;
+  document.querySelectorAll('.nfcbtn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');applyFilter();
+}
+function setSrc(s,btn){curSrc=s;document.querySelectorAll('.sbtn2').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');applyFilter();}
+
+let qTimer;
+document.getElementById('q').addEventListener('input',function(){
+  q=this.value.toLowerCase();clearTimeout(qTimer);
+  qTimer=setTimeout(()=>{q.length>2?fetchAll():applyFilter();},400);
+});
+
+// ── HELPERS ──
+function ago(d){
+  if(!d)return'';
+  try{
+    const s=typeof d==='string'?d:'';
+    const dt=new Date(s.includes('T')?s:s.replace(' ','T')+(s.includes('+')||s.includes('Z')?'':'Z'));
+    const sec=(Date.now()-dt)/1000;
+    if(sec<60)return Math.floor(sec)+'s';if(sec<3600)return Math.floor(sec/60)+'m';
+    if(sec<86400)return Math.floor(sec/3600)+'h';return Math.floor(sec/86400)+'d';
+  }catch{return'';}
+}
+function setSt(id,cls,txt){const e=document.getElementById('st-'+id);if(e){e.className='sst '+cls;e.textContent=txt;}}
+const SRC_CLS={guardian:'ab-gu',gnews:'ab-g',newsdata:'ab-n',rss:'ab-r',hn:'ab-h',usgs:'ab-r',nasa:'ab-r'};
+const SRC_NM={guardian:'Guardian',gnews:'GNews',newsdata:'Newsdata',rss:'RSS',hn:'HN',usgs:'USGS',nasa:'NASA'};
+
+// ── FETCH ALL ──
+function showSkel(){
+  let h='';for(let i=0;i<12;i++)h+=`<div class="ac"><div class="acm"><div class="skel" style="width:55px;height:9px"></div><div class="skel" style="width:40px;height:9px"></div></div><div class="skel" style="width:95%;height:10px;margin-bottom:3px"></div><div class="skel" style="width:75%;height:10px"></div></div>`;
+  document.getElementById('art-con').innerHTML=h;
+}
+async function fetchAll(){
+  showSkel();document.getElementById('live-ind').textContent='…';allArticles=[];
+  await Promise.allSettled([fetchGuardian(),fetchGNews(),fetchNewsdata(),fetchRSSFeeds(),fetchHN(),fetchUSGS(),fetchNASA()]);
+  applyFilter();updateStats();document.getElementById('live-ind').textContent='LIVE';
+  updateGlobeAlerts();
+}
+
+// ── CLOCK ──
+function updateClock(){
+  const el=document.getElementById('top-clock');
+  if(!el)return;
+  const now=new Date();
+  const d=now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  const t=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.textContent=d+' · '+t+' UTC'+(now.getTimezoneOffset()===0?'':' (local)');
+}
+updateClock();
+setInterval(updateClock,1000);
+
+// ── THEME TOGGLE ──
+let isLight = false;
+function toggleTheme() {
+  isLight = !isLight;
+  document.body.classList.toggle('light-theme', isLight);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = isLight ? '◑ Light' : '◑ Dark';
+  // Swap globe textures to match theme
+  if (globeInstance) {
+    if (isLight) {
+      globeInstance
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-day.jpg')
+        .backgroundImageUrl(null)
+        .atmosphereColor('rgba(100,160,255,0.35)')
+        .polygonStrokeColor(() => 'rgba(30,80,30,0.7)')
+        .polygonCapColor(() => 'rgba(30,100,30,0.06)');
+    } else {
+      globeInstance
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .atmosphereColor('rgba(61,180,255,0.25)')
+        .polygonStrokeColor(() => 'rgba(61,220,110,0.55)')
+        .polygonCapColor(() => 'rgba(61,220,110,0.04)');
+    }
+  }
+  // Persist preference
+  try { localStorage.setItem('pm_theme', isLight ? 'light' : 'dark'); } catch {}
+}
+// Restore saved preference on load
+try {
+  if (localStorage.getItem('pm_theme') === 'light') toggleTheme();
+} catch {}
+
+async function fetchGuardian(){
+  try{
+    setSt('guardian','pend','…');
+    const sec=curTopic?`&section=${curTopic}`:'';
+    const qs=q.length>2?`&q=${encodeURIComponent(q)}`:'';
+    const r=await fetch(`https://content.guardianapis.com/search?api-key=${keys.guardian||'test'}&show-fields=trailText,thumbnail&page-size=20&order-by=newest${sec}${qs}`);
+    const d=await r.json();
+    if(d.response?.results){
+      allArticles.push(...d.response.results.map(x=>({_s:'guardian',title:x.webTitle,description:x.fields?.trailText||'',link:x.webUrl,pubDate:x.webPublicationDate,source_id:'The Guardian',category:[x.sectionName||'world'],image_url:x.fields?.thumbnail||null,country:[]})));
+      setSt('guardian','ok',d.response.results.length+'');
+    }else setSt('guardian','err','err');
+  }catch{setSt('guardian','err','fail');}
+}
+async function fetchGNews(){
+  if(!keys.gnews){setSt('gnews','pend','no key');return;}
+  try{
+    setSt('gnews','pend','…');
+    const top=curTopic||'general';
+    const qs=q.length>2?encodeURIComponent(q):'breaking';
+    const r=await fetch(`https://gnews.io/api/v4/search?q=${qs}&lang=en&topic=${top}&max=10&token=${keys.gnews}`);
+    const d=await r.json();
+    if(d.articles){allArticles.push(...d.articles.map(x=>({_s:'gnews',title:x.title,description:x.description,link:x.url,pubDate:x.publishedAt,source_id:x.source?.name||'GNews',category:[top],image_url:x.image||null,country:[]})));setSt('gnews','ok',d.articles.length+'');}
+    else setSt('gnews','err','err');
+  }catch{setSt('gnews','err','fail');}
+}
+async function fetchNewsdata(){
+  if(!keys.newsdata){setSt('newsdata','pend','no key');return;}
+  try{
+    setSt('newsdata','pend','…');
+    const p=new URLSearchParams({apikey:keys.newsdata,language:'en',size:10});
+    if(curTopic)p.set('category',curTopic);
+    // continent → pick a representative country
+    const contCountries=CONTINENT_COUNTRIES[curContinent];
+    if(contCountries)p.set('country',contCountries.slice(0,5).join(','));
+    if(q.length>2)p.set('q',q);
+    const r=await fetch('https://newsdata.io/api/1/latest?'+p);
+    const d=await r.json();
+    if(d.status==='success'&&d.results){allArticles.push(...d.results.map(x=>({_s:'newsdata',title:x.title,description:x.description||'',link:x.link,pubDate:x.pubDate,source_id:x.source_id||'Newsdata',category:x.category||[],image_url:x.image_url||null,country:x.country||[]})));setSt('newsdata','ok',d.results.length+'');}
+    else setSt('newsdata','err',(d.message||'err').substring(0,10));
+  }catch{setSt('newsdata','err','fail');}
+}
+// ── RSS FEEDS (no key — via rss2json proxy) ──
+// Tier 1: wire services + major global outlets (worldmonitor-inspired list)
+const RSS_FEEDS = [
+  // Wire services (Tier 1)
+  {url:'https://feeds.reuters.com/reuters/worldNews',    src:'Reuters',       cat:'world'},
+  {url:'https://feeds.reuters.com/reuters/businessNews', src:'Reuters Biz',   cat:'business'},
+  {url:'https://feeds.reuters.com/reuters/technologyNews',src:'Reuters Tech',  cat:'technology'},
+  {url:'https://apnews.com/apf-topnews.rss',            src:'AP News',       cat:'world'},
+  {url:'https://afp.com/en/rss.xml',                    src:'AFP',           cat:'world'},
+  // BBC
+  {url:'https://feeds.bbci.co.uk/news/rss.xml',         src:'BBC News',      cat:'world'},
+  {url:'https://feeds.bbci.co.uk/news/world/rss.xml',   src:'BBC World',     cat:'world'},
+  {url:'https://feeds.bbci.co.uk/news/technology/rss.xml',src:'BBC Tech',    cat:'technology'},
+  {url:'https://feeds.bbci.co.uk/news/business/rss.xml', src:'BBC Business', cat:'business'},
+  {url:'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',src:'BBC Science',cat:'science'},
+  // Al Jazeera
+  {url:'https://www.aljazeera.com/xml/rss/all.xml',     src:'Al Jazeera',    cat:'world'},
+  // DW
+  {url:'https://rss.dw.com/rdf/rss-en-all',             src:'DW',            cat:'world'},
+  {url:'https://rss.dw.com/rdf/rss-en-world',           src:'DW World',      cat:'world'},
+  // France 24
+  {url:'https://www.france24.com/en/rss',                src:'France 24',     cat:'world'},
+  // NYT
+  {url:'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',  src:'NYT World', cat:'world'},
+  {url:'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml',src:'NYT Tech',cat:'technology'},
+  {url:'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', src:'NYT Biz', cat:'business'},
+  // WSJ
+  {url:'https://feeds.a.dj.com/rss/RSSWorldNews.xml',   src:'WSJ World',     cat:'world'},
+  // CNBC
+  {url:'https://www.cnbc.com/id/100003114/device/rss/rss.html', src:'CNBC',   cat:'business'},
+  // The Verge / tech
+  {url:'https://www.theverge.com/rss/index.xml',         src:'The Verge',     cat:'technology'},
+  {url:'https://feeds.wired.com/wired/index',            src:'Wired',         cat:'technology'},
+  // NASA
+  {url:'https://www.nasa.gov/news-release/feed/',        src:'NASA',          cat:'science'},
+  // Defense / security
+  {url:'https://www.defensenews.com/arc/outboundfeeds/rss/', src:'Defense News', cat:'world'},
+  // Google News topics
+  {url:'https://news.google.com/rss/headlines/section/topic/WORLD?hl=en&gl=US&ceid=US:en',   src:'Google World',  cat:'world'},
+  {url:'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en&gl=US&ceid=US:en',src:'Google Tech', cat:'technology'},
+  {url:'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en&gl=US&ceid=US:en', src:'Google Biz',  cat:'business'},
+  {url:'https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en&gl=US&ceid=US:en',  src:'Google Sci',  cat:'science'},
+  {url:'https://news.google.com/rss/headlines/section/topic/HEALTH?hl=en&gl=US&ceid=US:en',   src:'Google Health',cat:'health'},
+  {url:'https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en&gl=US&ceid=US:en',   src:'Google Sports',cat:'sports'},
+];
+
+async function fetchRSSFeeds(){
+  setSt('rss','pend','…');
+  // Pick feeds relevant to current topic filter
+  const toFetch = curTopic
+    ? RSS_FEEDS.filter(f=>f.cat===curTopic||f.src.includes('Google '+curTopic.charAt(0).toUpperCase()+curTopic.slice(1)))
+    : RSS_FEEDS.slice(0,12); // fetch first 12 in parallel when no filter
+
+  // Search query override
+  const searchFeeds = q.length>2
+    ? [{url:`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en&gl=US&ceid=US:en`, src:'Google Search', cat:curTopic||'world'}]
+    : toFetch;
+
+  const results = await Promise.allSettled(
+    searchFeeds.slice(0,10).map(async feed=>{
+      const proxy='https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(feed.url)+'&count=10';
+      const r=await fetch(proxy);
+      const d=await r.json();
+      if(d.status==='ok'&&d.items){
+        return d.items.map(x=>({
+          _s:'rss',
+          title:x.title,
+          description:x.description?x.description.replace(/<[^>]+>/g,'').substring(0,200):'',
+          link:x.link,
+          pubDate:x.pubDate,
+          source_id:feed.src,
+          category:[feed.cat],
+          image_url:x.thumbnail||null,
+          country:[],
+        }));
+      }
+      return [];
+    })
+  );
+
+  const items = results.flatMap(r=>r.status==='fulfilled'?r.value:[]);
+  allArticles.push(...items);
+  setSt('rss','ok',items.length+'');
+}
+
+// ── USGS EARTHQUAKES ──
+async function fetchUSGS(){
+  try{
+    setSt('usgs','pend','…');
+    const r=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson');
+    const d=await r.json();
+    if(d.features){
+      const items=d.features.slice(0,20).map(f=>({
+        _s:'usgs',
+        title:`🌍 M${f.properties.mag} Earthquake — ${f.properties.place}`,
+        description:`Magnitude ${f.properties.mag}, depth ${f.geometry?.coordinates?.[2]||'?'}km. Status: ${f.properties.status}`,
+        link:f.properties.url,
+        pubDate:new Date(f.properties.time).toISOString(),
+        source_id:'USGS',
+        category:['science','environment'],
+        image_url:null,
+        country:[],
+        _mag:f.properties.mag,
+        _lat:f.geometry?.coordinates?.[1]??null,
+        _lng:f.geometry?.coordinates?.[0]??null,
+      }));
+      allArticles.push(...items);
+      setSt('usgs','ok',items.length+'');
+    }
+  }catch{setSt('usgs','err','fail');}
+}
+
+// ── NASA EONET (Natural Events) ──
+async function fetchNASA(){
+  try{
+    setSt('nasa','pend','…');
+    const r=await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=30&days=30');
+    const d=await r.json();
+    if(d.events){
+      const items=d.events.map(e=>({
+        _s:'nasa',
+        title:`🛰 ${e.categories?.[0]?.title||'Event'} — ${e.title}`,
+        description:`Active natural event tracked by NASA EONET. Category: ${e.categories?.map(c=>c.title).join(', ')||'Unknown'}`,
+        link:e.sources?.[0]?.url||'https://eonet.gsfc.nasa.gov',
+        pubDate:e.geometry?.[0]?.date||new Date().toISOString(),
+        source_id:'NASA EONET',
+        category:['science','environment'],
+        image_url:null,
+        country:[],
+        _lat:e.geometry?.[0]?.coordinates?.[1]??null,
+        _lng:e.geometry?.[0]?.coordinates?.[0]??null,
+      }));
+      allArticles.push(...items);
+      setSt('nasa','ok',items.length+'');
+    }
+  }catch{setSt('nasa','err','fail');}
+}
+async function fetchHN(){
+  if(curTopic&&!['technology','science','business',''].includes(curTopic)){setSt('hn','pend','N/A');return;}
+  try{
+    setSt('hn','pend','…');
+    const url=q.length>2?`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=15`:`https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=15`;
+    const d=await (await fetch(url)).json();
+    if(d.hits){allArticles.push(...d.hits.filter(h=>h.title&&h.url).map(h=>({_s:'hn',title:h.title,description:`${h.points||0} pts · ${h.num_comments||0} comments · by ${h.author}`,link:h.url,pubDate:h.created_at,source_id:'Hacker News',category:['technology'],image_url:null,country:[]})));setSt('hn','ok',d.hits.length+'');}
+  }catch{setSt('hn','err','fail');}
+}
+
+// ── FILTER + RENDER NEWS ──
+function applyFilter(){
+  let a=[...allArticles];
+  if(curSrc!=='all')a=a.filter(x=>x._s===curSrc);
+  // continent filter: filter by known country codes
+  if(curContinent){
+    const cc=CONTINENT_COUNTRIES[curContinent]||[];
+    const filtered2=a.filter(x=>(x.country||[]).some(c=>cc.includes(c.toLowerCase())));
+    // if continent filter returns something, use it; otherwise show all (not all APIs return country)
+    if(filtered2.length>0)a=filtered2;
+  }
+  if(q.length>0&&q.length<=2)a=a.filter(x=>(x.title||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q));
+  const seen=new Set();
+  a=a.filter(x=>{const k=(x.title||'').substring(0,50);if(seen.has(k))return false;seen.add(k);return true;});
+  filtered=a;
+  document.getElementById('fc').textContent=a.length;
+  renderNews();
+}
+
+function renderNews(){
+  const c=document.getElementById('art-con');
+  if(!filtered.length){c.innerHTML='<div class="cmsg">No articles</div>';return;}
+  c.innerHTML=filtered.map((a,i)=>{
+    const cats=(a.category||[]).slice(0,2).map(ct=>`<span class="ctag t-${ct.toLowerCase().replace(/[^a-z]/g,'-')}">${ct}</span>`).join('');
+    return `<div class="ac ${selIdx===i?'sel':''}" onclick="selArt(${i})">
+      <div class="acm"><span class="abadge ${SRC_CLS[a._s]||''}">${SRC_NM[a._s]||a._s}</span><span class="abadge" style="background:rgba(255,255,255,.05);color:var(--muted)">${(a.source_id||'').substring(0,14)}</span>${cats}<span class="ago">${ago(a.pubDate)}</span></div>
+      <div class="atit">${(a.title||'').replace(/</g,'&lt;')}</div>
+      ${a.description?`<div class="adsc">${a.description.replace(/</g,'&lt;').substring(0,110)}…</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function selArt(i){
+  selIdx=i;renderNews();
+  const a=filtered[i];if(!a)return;
+  // open in new tab directly (compact view — no detail panel in this layout)
+  if(a.link)window.open(a.link,'_blank');
+}
+
+function updateStats(){
+  const srcs=[...new Set(allArticles.map(a=>a.source_id).filter(Boolean))];
+  const apis=[...new Set(allArticles.map(a=>a._s).filter(Boolean))];
+  const now=Date.now();
+  const lastHour=allArticles.filter(a=>{
+    try{const s=a.pubDate||'';const dt=new Date(s.includes('T')?s:s.replace(' ','T')+(s.includes('+')||s.includes('Z')?'':'Z'));return!isNaN(dt)&&(now-dt)<3600000;}catch{return false;}
+  }).length;
+  document.getElementById('st-art').textContent=allArticles.length||'—';
+  document.getElementById('st-src').textContent=srcs.length||'—';
+  document.getElementById('st-ctr').textContent=lastHour||'—';
+  document.getElementById('st-upd').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('g-a').textContent=allArticles.length||'—';
+  document.getElementById('g-s').textContent=srcs.length||'—';
+  document.getElementById('g-c').textContent=lastHour||'—';
+  if(allArticles[0]){document.getElementById('ghl').style.display='block';document.getElementById('ghlt').textContent=allArticles[0].title||'';}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GLOBE — globe.gl (WebGL / Three.js)
+// ═══════════════════════════════════════════════════════════════════
+let globeInstance = null;
+let gRot = true;
+let showAlerts = true;
+let hlIdx = 0;
+
+// ── Global news hubs — 65 cities with genuine continental coverage ──
+const NEWS_HUBS = [
+  // ── NORTH AMERICA (0-7) ──
+  {name:'New York',       lat:40.71,  lng:-74.01, type:'hub'},
+  {name:'Washington DC',  lat:38.91,  lng:-77.04, type:'hub'},
+  {name:'Los Angeles',    lat:34.05,  lng:-118.24,type:'hub'},
+  {name:'Chicago',        lat:41.88,  lng:-87.63, type:'hub'},
+  {name:'Toronto',        lat:43.65,  lng:-79.38, type:'hub'},
+  {name:'Mexico City',    lat:19.43,  lng:-99.13, type:'hub'},
+  {name:'Miami',          lat:25.77,  lng:-80.19, type:'hub'},
+  {name:'Vancouver',      lat:49.28,  lng:-123.12,type:'hub'},
+
+  // ── LATIN AMERICA (8-13) ──
+  {name:'São Paulo',      lat:-23.55, lng:-46.63, type:'hub'},
+  {name:'Buenos Aires',   lat:-34.60, lng:-58.38, type:'hub'},
+  {name:'Bogotá',         lat:4.71,   lng:-74.07, type:'hub'},
+  {name:'Lima',           lat:-12.04, lng:-77.03, type:'hub'},
+  {name:'Santiago',       lat:-33.45, lng:-70.67, type:'hub'},
+  {name:'Caracas',        lat:10.48,  lng:-66.88, type:'hub'},
+
+  // ── EUROPE (14-26) ──
+  {name:'London',         lat:51.51,  lng:-0.13,  type:'hub'},
+  {name:'Paris',          lat:48.85,  lng:2.35,   type:'hub'},
+  {name:'Berlin',         lat:52.52,  lng:13.40,  type:'hub'},
+  {name:'Brussels',       lat:50.85,  lng:4.35,   type:'hub'},
+  {name:'Madrid',         lat:40.42,  lng:-3.70,  type:'hub'},
+  {name:'Rome',           lat:41.90,  lng:12.50,  type:'hub'},
+  {name:'Warsaw',         lat:52.23,  lng:21.01,  type:'hub'},
+  {name:'Vienna',         lat:48.21,  lng:16.37,  type:'hub'},
+  {name:'Stockholm',      lat:59.33,  lng:18.07,  type:'hub'},
+  {name:'Amsterdam',      lat:52.37,  lng:4.90,   type:'hub'},
+  {name:'Kyiv',           lat:50.45,  lng:30.52,  type:'hub'},
+  {name:'Moscow',         lat:55.75,  lng:37.62,  type:'hub'},
+  {name:'Istanbul',       lat:41.01,  lng:28.97,  type:'hub'},
+
+  // ── MIDDLE EAST (27-33) ──
+  {name:'Cairo',          lat:30.06,  lng:31.25,  type:'hub'},
+  {name:'Dubai',          lat:25.20,  lng:55.27,  type:'hub'},
+  {name:'Riyadh',         lat:24.69,  lng:46.72,  type:'hub'},
+  {name:'Baghdad',        lat:33.34,  lng:44.40,  type:'hub'},
+  {name:'Tehran',         lat:35.69,  lng:51.39,  type:'hub'},
+  {name:'Beirut',         lat:33.89,  lng:35.50,  type:'hub'},
+  {name:'Doha',           lat:25.29,  lng:51.53,  type:'hub'},
+
+  // ── AFRICA (34-46) ──
+  {name:'Tunis',          lat:36.82,  lng:10.17,  type:'hub'},
+  {name:'Algiers',        lat:36.74,  lng:3.06,   type:'hub'},
+  {name:'Casablanca',     lat:33.59,  lng:-7.62,  type:'hub'},
+  {name:'Lagos',          lat:6.52,   lng:3.38,   type:'hub'},
+  {name:'Accra',          lat:5.55,   lng:-0.20,  type:'hub'},
+  {name:'Dakar',          lat:14.72,  lng:-17.47, type:'hub'},
+  {name:'Abidjan',        lat:5.35,   lng:-4.00,  type:'hub'},
+  {name:'Kinshasa',       lat:-4.32,  lng:15.32,  type:'hub'},
+  {name:'Nairobi',        lat:-1.29,  lng:36.82,  type:'hub'},
+  {name:'Addis Ababa',    lat:9.03,   lng:38.74,  type:'hub'},
+  {name:'Dar es Salaam',  lat:-6.79,  lng:39.21,  type:'hub'},
+  {name:'Johannesburg',   lat:-26.20, lng:28.04,  type:'hub'},
+  {name:'Luanda',         lat:-8.84,  lng:13.23,  type:'hub'},
+
+  // ── CENTRAL & SOUTH ASIA (47-52) ──
+  {name:'Karachi',        lat:24.86,  lng:67.01,  type:'hub'},
+  {name:'Mumbai',         lat:19.08,  lng:72.88,  type:'hub'},
+  {name:'New Delhi',      lat:28.61,  lng:77.21,  type:'hub'},
+  {name:'Dhaka',          lat:23.81,  lng:90.41,  type:'hub'},
+  {name:'Kabul',          lat:34.53,  lng:69.17,  type:'hub'},
+  {name:'Tashkent',       lat:41.30,  lng:69.24,  type:'hub'},
+
+  // ── EAST & SOUTHEAST ASIA (53-62) ──
+  {name:'Beijing',        lat:39.90,  lng:116.40, type:'hub'},
+  {name:'Shanghai',       lat:31.23,  lng:121.47, type:'hub'},
+  {name:'Tokyo',          lat:35.68,  lng:139.69, type:'hub'},
+  {name:'Seoul',          lat:37.57,  lng:126.98, type:'hub'},
+  {name:'Bangkok',        lat:13.75,  lng:100.52, type:'hub'},
+  {name:'Singapore',      lat:1.35,   lng:103.82, type:'hub'},
+  {name:'Jakarta',        lat:-6.21,  lng:106.85, type:'hub'},
+  {name:'Manila',         lat:14.60,  lng:120.98, type:'hub'},
+  {name:'Kuala Lumpur',   lat:3.14,   lng:101.69, type:'hub'},
+  {name:'Yangon',         lat:16.87,  lng:96.19,  type:'hub'},
+
+  // ── OCEANIA (63-64) ──
+  {name:'Sydney',         lat:-33.87, lng:151.21, type:'hub'},
+  {name:'Auckland',       lat:-36.85, lng:174.76, type:'hub'},
+];
+
+// Arc pairs — regional clusters connected to nearest major hubs
+// Using named lookup so indices don't go stale
+function buildHubArcsByName(hubs) {
+  const idx = {};
+  hubs.forEach((h, i) => { idx[h.name] = i; });
+  const pairs = [
+    // Trans-Atlantic
+    ['New York','London'],['New York','Paris'],['Washington DC','London'],
+    ['New York','São Paulo'],['Miami','Bogotá'],['New York','Mexico City'],
+    // Europe internal
+    ['London','Paris'],['Paris','Berlin'],['Berlin','Warsaw'],['Paris','Madrid'],
+    ['London','Brussels'],['Berlin','Vienna'],['Stockholm','London'],
+    ['Amsterdam','Berlin'],['Kyiv','Moscow'],['Moscow','Istanbul'],
+    // Europe–Middle East
+    ['Istanbul','Cairo'],['Istanbul','Beirut'],['London','Dubai'],
+    ['Paris','Doha'],['Moscow','Tehran'],['Istanbul','Baghdad'],
+    // Middle East internal
+    ['Cairo','Riyadh'],['Dubai','Riyadh'],['Doha','Riyadh'],
+    // Africa — North
+    ['Cairo','Tunis'],['Tunis','Algiers'],['Algiers','Casablanca'],
+    ['Cairo','Addis Ababa'],
+    // Africa — West
+    ['Dakar','Accra'],['Accra','Lagos'],['Lagos','Abidjan'],['Lagos','Kinshasa'],
+    // Africa — East & South
+    ['Nairobi','Addis Ababa'],['Nairobi','Dar es Salaam'],
+    ['Johannesburg','Nairobi'],['Johannesburg','Luanda'],['Luanda','Kinshasa'],
+    // Africa–Europe
+    ['Lagos','London'],['Nairobi','Dubai'],['Cairo','London'],
+    // Asia internal
+    ['New Delhi','Beijing'],['New Delhi','Mumbai'],['Karachi','New Delhi'],
+    ['Dhaka','Bangkok'],['Beijing','Seoul'],['Beijing','Tokyo'],
+    ['Seoul','Tokyo'],['Beijing','Shanghai'],['Shanghai','Tokyo'],
+    // Southeast Asia
+    ['Singapore','Bangkok'],['Singapore','Jakarta'],['Singapore','Manila'],
+    ['Bangkok','Kuala Lumpur'],['Manila','Tokyo'],['Jakarta','Sydney'],
+    // Trans-Pacific
+    ['Tokyo','Los Angeles'],['Sydney','Los Angeles'],['Auckland','Sydney'],
+    // South America internal
+    ['São Paulo','Buenos Aires'],['São Paulo','Lima'],['Bogotá','Lima'],
+    ['Santiago','Buenos Aires'],['Caracas','Bogotá'],
+    // Central Asia
+    ['Tashkent','Moscow'],['Tashkent','New Delhi'],['Kabul','New Delhi'],
+    // Oceania–Asia
+    ['Sydney','Singapore'],['Auckland','Los Angeles'],
+  ];
+  return pairs
+    .filter(([a,b]) => idx[a] !== undefined && idx[b] !== undefined)
+    .map(([a,b]) => [idx[a], idx[b]]);
+}
+const HUB_ARCS = buildHubArcsByName(NEWS_HUBS);
+
+// Color helpers
+const ALERT_COLORS = {
+  quake:   { point:'#e55',   ring: t=>`rgba(229,85,85,${1-t})`,  arc:['rgba(229,85,85,0.1)','rgba(229,85,85,0.9)'] },
+  nasa:    { point:'#ff9632',ring: t=>`rgba(255,150,50,${1-t})`,  arc:['rgba(255,150,50,0.1)','rgba(255,150,50,0.9)'] },
+  hub:     { point:'#3ddc6e',ring: t=>`rgba(61,220,110,${1-t})`,  arc:['rgba(61,220,110,0.05)','rgba(61,220,110,0.6)'] },
+  breaking:{ point:'#4a9eff',ring: t=>`rgba(74,158,255,${1-t})`,  arc:['rgba(74,158,255,0.1)','rgba(74,158,255,0.9)'] },
+};
+
+function toggleRot() {
+  gRot = !gRot;
+  const btn = document.getElementById('gbtn-rot');
+  if (btn) { btn.textContent = gRot ? '⟳ Spinning' : '⏸ Paused'; btn.classList.toggle('on', gRot); }
+  if (globeInstance) globeInstance.controls().autoRotate = gRot;
+}
+
+function toggleAlerts() {
+  showAlerts = !showAlerts;
+  const btn = document.getElementById('gbtn-alerts');
+  if (btn) btn.classList.toggle('on', showAlerts);
+  updateGlobeAlerts();
+}
+
+// Called after each fetchAll() to push live data onto the globe
+function updateGlobeAlerts() {
+  if (!globeInstance) return;
+
+  if (!showAlerts) {
+    globeInstance.pointsData([]).ringsData([]).arcsData([]);
+    return;
+  }
+
+  // ── Points: earthquake alerts + NASA events from allArticles ──
+  const quakePoints = allArticles
+    .filter(a => a._s === 'usgs' && a._lat != null)
+    .slice(0, 30)
+    .map(a => ({
+      lat: a._lat, lng: a._lng,
+      type: 'quake',
+      label: a.title,
+      mag: a._mag || 4,
+    }));
+
+  const nasaPoints = allArticles
+    .filter(a => a._s === 'nasa' && a._lat != null)
+    .slice(0, 20)
+    .map(a => ({
+      lat: a._lat, lng: a._lng,
+      type: 'nasa',
+      label: a.title,
+      mag: 3,
+    }));
+
+  // ── Breaking news points from filtered articles that have geo data ──
+  const breakingPoints = allArticles
+    .filter(a => a._lat != null && a._s !== 'usgs' && a._s !== 'nasa')
+    .slice(0, 15)
+    .map(a => ({
+      lat: a._lat, lng: a._lng,
+      type: 'breaking',
+      label: a.title,
+      mag: 2.5,
+    }));
+
+  const hubPoints = NEWS_HUBS.map(h => ({ ...h, mag: 1 }));
+
+  const allPoints = [...quakePoints, ...nasaPoints, ...breakingPoints, ...hubPoints];
+
+  // ── Rings: one per alert (quakes loudest) ──
+  const ringData = [...quakePoints, ...nasaPoints, ...breakingPoints].map(p => ({
+    lat: p.lat, lng: p.lng,
+    type: p.type,
+    maxR: p.type === 'quake' ? 4 : 2.5,
+    propagationSpeed: p.type === 'quake' ? 3 : 2,
+    repeatPeriod: p.type === 'quake' ? 800 : 1400,
+  }));
+
+  // ── Arcs: hub-to-hub + alert-to-nearest-hub ──
+  const hubArcs = HUB_ARCS.map(([a, b]) => ({
+    startLat: NEWS_HUBS[a].lat, startLng: NEWS_HUBS[a].lng,
+    endLat:   NEWS_HUBS[b].lat, endLng:   NEWS_HUBS[b].lng,
+    type: 'hub',
+  }));
+
+  const alertArcs = [...quakePoints, ...nasaPoints].slice(0, 12).map(p => {
+    // connect to nearest hub
+    let best = NEWS_HUBS[0], bestD = Infinity;
+    NEWS_HUBS.forEach(h => {
+      const d = Math.hypot(h.lat - p.lat, h.lng - p.lng);
+      if (d < bestD) { bestD = d; best = h; }
+    });
+    return {
+      startLat: p.lat, startLng: p.lng,
+      endLat: best.lat, endLng: best.lng,
+      type: p.type,
+    };
+  });
+
+  globeInstance
+    .pointsData(allPoints)
+    .ringsData(ringData)
+    .arcsData([...hubArcs, ...alertArcs]);
+}
+
+function initGlobe() {
+  const container = document.getElementById('globe-container');
+  const tooltip   = document.getElementById('globe-tooltip');
+
+  globeInstance = Globe({ animateIn: true })
+    (container)
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .showAtmosphere(true)
+    .atmosphereColor('rgba(61,180,255,0.25)')
+    .atmosphereAltitude(0.18)
+    .showGraticules(false)
+
+    // ── Country polygons — ALL 195 countries with borders ──
+    .polygonsData([])
+    .polygonGeoJsonGeometry('geometry')
+    .polygonCapColor(() => 'rgba(61,220,110,0.04)')
+    .polygonSideColor(() => 'rgba(61,220,110,0.0)')
+    .polygonStrokeColor(() => 'rgba(61,220,110,0.55)')
+    .polygonAltitude(0.001)
+    .polygonLabel(d => `<div style="background:rgba(2,6,16,.92);border:1px solid rgba(61,220,110,.3);border-radius:5px;padding:5px 9px;font-size:11px;color:#e2e8e2;font-family:system-ui">${d.properties?.name || ''}</div>`)
+
+    // ── Points ──
+    .pointsData([])
+    .pointLat('lat')
+    .pointLng('lng')
+    .pointAltitude(d => d.type === 'quake' ? 0.02 + (d.mag - 2) * 0.008 : 0.012)
+    .pointRadius(d => d.type === 'hub' ? 0.18 : d.type === 'quake' ? 0.35 : 0.28)
+    .pointColor(d => ALERT_COLORS[d.type]?.point || '#fff')
+    .pointsMerge(false)
+    .onPointHover(p => {
+      if (!p) { tooltip.style.display = 'none'; return; }
+      tooltip.style.display = 'block';
+      tooltip.innerHTML = `<strong style="color:${ALERT_COLORS[p.type]?.point}">${p.type.toUpperCase()}</strong><br>${p.label || p.name || ''}`;
+    })
+    .onPointClick(p => {
+      if (!p) return;
+      const art = allArticles.find(a => a.title === p.label);
+      if (art?.link) window.open(art.link, '_blank');
+    })
+
+    // ── Rings ──
+    .ringsData([])
+    .ringLat('lat')
+    .ringLng('lng')
+    .ringMaxRadius('maxR')
+    .ringPropagationSpeed('propagationSpeed')
+    .ringRepeatPeriod('repeatPeriod')
+    .ringColor(d => ALERT_COLORS[d.type]?.ring || (t => `rgba(255,255,255,${1-t})`))
+    .ringAltitude(0.001)
+
+    // ── Arcs ──
+    .arcsData([])
+    .arcStartLat('startLat').arcStartLng('startLng')
+    .arcEndLat('endLat').arcEndLng('endLng')
+    .arcColor(d => ALERT_COLORS[d.type]?.arc || ['rgba(255,255,255,0.05)','rgba(255,255,255,0.5)'])
+    .arcAltitudeAutoScale(d => d.type === 'hub' ? 0.3 : 0.6)
+    .arcStroke(d => d.type === 'hub' ? 0.25 : 0.5)
+    .arcDashLength(d => d.type === 'hub' ? 0.4 : 0.6)
+    .arcDashGap(d => d.type === 'hub' ? 2 : 1)
+    .arcDashAnimateTime(d => d.type === 'hub' ? 3000 : 1500)
+    .arcsTransitionDuration(600)
+
+    // ── Labels — removed (countries show via polygon hover) ──
+    .labelsData([])
+
+    .onGlobeReady(() => {
+      // Load all countries from TopoJSON — 195 countries, full world coverage
+      fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+        .then(r => r.json())
+        .then(world => {
+          // Inline topojson.feature to avoid extra script dependency
+          const arcs = world.arcs;
+          function arcCoords(i) {
+            const reversed = i < 0;
+            const arc = arcs[reversed ? ~i : i];
+            let x = 0, y = 0;
+            const coords = arc.map(([dx, dy]) => {
+              x += dx; y += dy;
+              return [x * world.transform.scale[0] + world.transform.translate[0],
+                      y * world.transform.scale[1] + world.transform.translate[1]];
+            });
+            return reversed ? coords.reverse() : coords;
+          }
+          function toGeometry(arcsIdx) {
+            return arcsIdx.map(ring =>
+              [].concat(...ring.map(i => arcCoords(i)))
+            );
+          }
+
+          const features = world.objects.countries.geometries.map(geo => {
+            let coordinates;
+            if (geo.type === 'Polygon') {
+              coordinates = toGeometry(geo.arcs);
+            } else { // MultiPolygon
+              coordinates = geo.arcs.map(poly => toGeometry(poly)[0] || []);
+            }
+            return {
+              type: 'Feature',
+              properties: { name: geo.id },   // numeric ISO id; name enriched below
+              geometry: { type: geo.type, coordinates }
+            };
+          });
+
+          // Enrich with human-readable names via a small lookup
+          const ISO_NAMES = {
+            4:'Afghanistan',8:'Albania',12:'Algeria',24:'Angola',32:'Argentina',
+            36:'Australia',40:'Austria',50:'Bangladesh',56:'Belgium',68:'Bolivia',
+            76:'Brazil',100:'Bulgaria',116:'Cambodia',120:'Cameroon',124:'Canada',
+            144:'Sri Lanka',152:'Chile',156:'China',170:'Colombia',178:'Congo',
+            180:'DR Congo',188:'Costa Rica',191:'Croatia',192:'Cuba',203:'Czechia',
+            208:'Denmark',218:'Ecuador',818:'Egypt',222:'El Salvador',231:'Ethiopia',
+            246:'Finland',250:'France',276:'Germany',288:'Ghana',300:'Greece',
+            320:'Guatemala',324:'Guinea',332:'Haiti',340:'Honduras',348:'Hungary',
+            356:'India',360:'Indonesia',364:'Iran',368:'Iraq',372:'Ireland',
+            376:'Israel',380:'Italy',388:'Jamaica',392:'Japan',400:'Jordan',
+            398:'Kazakhstan',404:'Kenya',408:'North Korea',410:'South Korea',
+            414:'Kuwait',418:'Laos',422:'Lebanon',434:'Libya',484:'Mexico',
+            504:'Morocco',508:'Mozambique',516:'Namibia',524:'Nepal',
+            528:'Netherlands',554:'New Zealand',566:'Nigeria',578:'Norway',
+            586:'Pakistan',591:'Panama',600:'Paraguay',604:'Peru',608:'Philippines',
+            616:'Poland',620:'Portugal',630:'Puerto Rico',634:'Qatar',642:'Romania',
+            643:'Russia',682:'Saudi Arabia',686:'Senegal',694:'Sierra Leone',
+            703:'Slovakia',706:'Somalia',710:'South Africa',724:'Spain',729:'Sudan',
+            752:'Sweden',756:'Switzerland',760:'Syria',764:'Thailand',788:'Tunisia',
+            792:'Turkey',800:'Uganda',804:'Ukraine',784:'UAE',826:'United Kingdom',
+            840:'United States',858:'Uruguay',860:'Uzbekistan',862:'Venezuela',
+            704:'Vietnam',887:'Yemen',894:'Zambia',716:'Zimbabwe',
+          };
+          features.forEach(f => {
+            const id = parseInt(f.properties.name);
+            if (ISO_NAMES[id]) f.properties.name = ISO_NAMES[id];
+          });
+
+          globeInstance.polygonsData(features);
+        });
+    });
+
+  // Size globe to container
+  function resize() {
+    const w = container.clientWidth, h = container.clientHeight;
+    if (w && h) globeInstance.width(w).height(h);
+  }
+  resize();
+  const ro = new ResizeObserver(resize);
+  ro.observe(container);
+
+  // Auto-rotation
+  globeInstance.controls().autoRotate = true;
+  globeInstance.controls().autoRotateSpeed = 0.35;
+  globeInstance.controls().enableZoom = true;
+  globeInstance.controls().zoomSpeed = 0.8;
+
+  // Initial POV
+  globeInstance.pointOfView({ lat: 20, lng: 10, altitude: 2.2 }, 0);
+
+  // Tooltip follows mouse
+  container.addEventListener('mousemove', e => {
+    if (tooltip.style.display === 'block') {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      tooltip.style.left = (x + 14) + 'px';
+      tooltip.style.top  = (y - 10) + 'px';
+    }
+  });
+  container.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  // Headline cycle overlay
+  setInterval(() => {
+    if (!allArticles.length) return;
+    hlIdx = (hlIdx + 1) % Math.min(allArticles.length, 30);
+    const el = document.getElementById('ghlt');
+    if (el) el.textContent = (allArticles[hlIdx] || {}).title || '';
+    const hl = document.getElementById('ghl');
+    if (hl) hl.style.display = 'block';
+  }, 4500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TV — PINNED FAVS + iptv-org list
+// ═══════════════════════════════════════════════════════════════════
+const hlsInst={};
+
+// Pinned favorites config (top 3 auto-start + 3 more in list marked fav)
+const PINNED_FAVS=[
+  {id:'bloomberg',name:'Bloomberg TV',flag:'🇺🇸',urls:['https://bloomberg.com/media-manifest/streams/us.m3u8']},
+  {id:'skynews',  name:'Sky News',    flag:'🇬🇧',urls:['https://linear901-oo-hls0-prd-gtm.delivery.skycdp.com/17501/sde-fast-skynews/master.m3u8']},
+  {id:'euronews', name:'Euronews',    flag:'🇪🇺',urls:['https://dash4.antik.sk/live/test_euronews/playlist.m3u8']},
+];
+const LIST_FAVS=[
+  {id:'dw',       name:'DW News',     flag:'🇩🇪',urls:['https://dwamdstream103.akamaized.net/hls/live/2015526/dwstream103/master.m3u8']},
+  {id:'france24', name:'France 24',   flag:'🇫🇷',urls:['https://amg00106-france24-france24-samsunguk-qvpp8.amagi.tv/playlist/amg00106-france24-france24-samsunguk/playlist.m3u8']},
+  {id:'aljazeera',name:'Al Jazeera',  flag:'🇶🇦',urls:['https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8','https://live-hls-web-aje.getaj.net/AJE/index.m3u8']},
+];
+
+// Track which channel id is currently live in each slot
+const slotPlaying = {}; // { vidId: channelId }
+
+// Build a flat rotation pool starting from startId, skipping any channel already playing elsewhere
+function buildRotationPool(startId, ownVidId) {
+  const ALL_FAVS = [...PINNED_FAVS, ...LIST_FAVS];
+  const startIdx = ALL_FAVS.findIndex(c => c.id === startId);
+  const ordered = [
+    ...ALL_FAVS.slice(startIdx),
+    ...ALL_FAVS.slice(0, startIdx),
+  ];
+  return ordered.flatMap(ch => ch.urls.map(url => ({ url, name: ch.name, flag: ch.flag, id: ch.id })));
+}
+
+function loadHLS(vidId, phId, stId, urls, rotateOnFail = false, startId = null) {
+  const vid = document.getElementById(vidId);
+  const ph  = document.getElementById(phId);
+  const st  = document.getElementById(stId);
+  if (!vid) return;
+
+  const ownPool = urls.map(url => ({ url, name: null, id: startId }));
+  let pool = rotateOnFail && startId ? buildRotationPool(startId, vidId) : ownPool;
+  let idx = 0;
+
+  function tryNext() {
+    // Skip entries whose channel is already live in a different slot
+    while (idx < pool.length) {
+      const entry = pool[idx];
+      const alreadyElsewhere = entry.id &&
+        Object.entries(slotPlaying).some(([vid2, chId]) => vid2 !== vidId && chId === entry.id);
+      if (!alreadyElsewhere) break;
+      idx++;
+    }
+
+    if (idx >= pool.length) {
+      if (st) { st.textContent = '↻ retrying…'; st.className = 'tv-fav-st loading'; }
+      if (ph) { ph.style.display = 'flex'; ph.textContent = 'Retrying…'; }
+      vid.style.display = 'none';
+      idx = 0;
+      setTimeout(tryNext, 8000);
+      return;
+    }
+
+    const entry = pool[idx++];
+    const url   = entry.url;
+
+    if (st) { st.textContent = '● …'; st.className = 'tv-fav-st loading'; }
+    if (ph) ph.style.display = 'none';
+    vid.style.display = 'block';
+
+    // Update slot name in header if rotated to a different channel
+    if (rotateOnFail && entry.name) {
+      const hdr = vid.closest?.('.tv-fav')?.querySelector('.tv-fav-name')
+        || document.querySelector(`#${CSS.escape(vidId)}`)?.closest('.tv-fav')?.querySelector('.tv-fav-name');
+      if (hdr) hdr.textContent = `${entry.flag || ''} ${entry.name}`.trim();
+    }
+
+    const key = vidId;
+    if (hlsInst[key]) { hlsInst[key].destroy(); delete hlsInst[key]; }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: false, lowLatencyMode: true });
+      hlsInst[key] = hls;
+      hls.loadSource(url);
+      hls.attachMedia(vid);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        vid.play().catch(() => {});
+        if (st) { st.textContent = '● LIVE'; st.className = 'tv-fav-st live'; }
+        if (entry.id) slotPlaying[vidId] = entry.id; // mark this slot as playing this channel
+      });
+      hls.on(Hls.Events.ERROR, (_, d) => {
+        if (d.fatal) {
+          delete slotPlaying[vidId]; // no longer playing
+          tryNext();
+        }
+      });
+    } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+      vid.src = url;
+      vid.oncanplay = () => {
+        vid.play().catch(() => {});
+        if (st) { st.textContent = '● LIVE'; st.className = 'tv-fav-st live'; }
+        if (entry.id) slotPlaying[vidId] = entry.id;
+      };
+      vid.onerror = () => { delete slotPlaying[vidId]; tryNext(); };
+    } else {
+      if (st) { st.textContent = '✕ N/A'; st.className = 'tv-fav-st err'; }
+    }
+  }
+
+  tryNext();
+}
+
+// Start pinned favs with rotation, with a small stagger so slot 1 locks in before slot 2 tries
+PINNED_FAVS.forEach((ch, i) =>
+  setTimeout(() => loadHLS('fv-'+ch.id, 'fph-'+ch.id, 'fst-'+ch.id, ch.urls, true, ch.id), i * 800)
+);
+
+// ── iptv-org list ──
+let tvChannels=[],tvStreams=[],tvBuilt=false,tvFilter='';
+const COUNTRY_FLAGS={US:'🇺🇸',GB:'🇬🇧',FR:'🇫🇷',DE:'🇩🇪',JP:'🇯🇵',CN:'🇨🇳',IN:'🇮🇳',TN:'🇹🇳',EG:'🇪🇬',AU:'🇦🇺',CA:'🇨🇦',BR:'🇧🇷',RU:'🇷🇺',ZA:'🇿🇦',NG:'🇳🇬',SA:'🇸🇦',TR:'🇹🇷',QA:'🇶🇦',AR:'🇦🇷',MX:'🇲🇽',IT:'🇮🇹',ES:'🇪🇸',NL:'🇳🇱',SE:'🇸🇪',PL:'🇵🇱',KR:'🇰🇷',MA:'🇲🇦',DZ:'🇩🇿',IQ:'🇮🇶',UA:'🇺🇦',GR:'🇬🇷',BE:'🇧🇪',KE:'🇰🇪',GH:'🇬🇭',IR:'🇮🇷',IL:'🇮🇱',LB:'🇱🇧',JO:'🇯🇴',PT:'🇵🇹',ID:'🇮🇩',PK:'🇵🇰'};
+
+async function initTVList(){
+  if(tvBuilt)return;tvBuilt=true;
+  try{
+    const[chRes,stRes]=await Promise.all([
+      fetch('https://iptv-org.github.io/api/channels.json'),
+      fetch('https://iptv-org.github.io/api/streams.json')
+    ]);
+    tvChannels=await chRes.json();tvStreams=await stRes.json();
+  }catch{return;}
+  const sm={};tvStreams.forEach(s=>{if(!sm[s.channel])sm[s.channel]=[];sm[s.channel].push(s);});
+  tvChannels=tvChannels.filter(ch=>sm[ch.id]&&sm[ch.id].length>0);
+  tvChannels.forEach(ch=>ch._streams=sm[ch.id]);
+  document.getElementById('tv-ch-badge').textContent=tvChannels.length+' ch';
+  initTVBrowser();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TV BROWSER — fixed slots + channel picker
+// ═══════════════════════════════════════════════════════════════════
+let tvbLayout=2, tvbFilter='', tvbCat='', tvbHlsInst={}, tvbBuilt=false;
+let tvbActiveSlot=null; // slot index currently selected for picking
+let tvbSlots=[]; // [{chId, name, flag}|null, ...]  — one entry per slot
+
+function setTVBLayout(n, btn){
+  tvbLayout=n;
+  document.querySelectorAll('.tvb-lbtn').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  // Destroy HLS only for slots being removed
+  for(let i=n; i<tvbSlots.length; i++){
+    const key='tvbs-'+i;
+    if(tvbHlsInst[key]){tvbHlsInst[key].destroy();delete tvbHlsInst[key];}
+  }
+  buildTVBSlots(); // full rebuild only on layout change
+}
+
+let tvbFocusedSlot=null;
+
+function buildTVBSlots(){
+  while(tvbSlots.length < tvbLayout) tvbSlots.push(null);
+  tvbSlots=tvbSlots.slice(0,tvbLayout);
+  if(tvbActiveSlot>=tvbLayout) tvbActiveSlot=null;
+  if(tvbFocusedSlot>=tvbLayout) tvbFocusedSlot=null;
+
+  const wrap=document.getElementById('tvb-screens');
+  wrap.className='tvb-screens s'+tvbLayout;
+
+  // Detach existing video elements before clearing wrap
+  const savedVids={};
+  for(let i=0;i<tvbLayout;i++){
+    const v=document.getElementById('tvbs-vid-'+i);
+    if(v) savedVids[i]=v;
+  }
+
+  wrap.innerHTML='';
+
+  tvbSlots.forEach((slot,i)=>{
+    const isSelected=i===tvbActiveSlot;
+    const isFocused=i===tvbFocusedSlot;
+    const div=document.createElement('div');
+    div.className='tvb-slot'+(slot?' live':'')+(isSelected?' active-pick':'')+(isFocused?' focused':'');
+    div.id='tvb-slot-'+i;
+    div.innerHTML=`
+      <div class="tvb-slot-hdr">
+        <span class="tvb-focus-badge">🔊</span>
+        <span class="tvb-slot-name ${slot?'live':''}" id="tvbs-name-${i}">${slot?slot.flag+' '+slot.name:'Screen '+(i+1)}</span>
+        <span class="tvb-slot-st" id="tvbs-st-${i}"></span>
+        ${isSelected?'<span class="active-label" style="font-size:9px;color:var(--accent);font-family:var(--mono);flex-shrink:0">← active</span>':''}
+        ${slot?`<button class="tvb-slot-close" title="Remove">✕</button>`:''}
+      </div>
+      <div class="tvb-slot-vw" id="tvbs-vw-${i}">
+        <div class="tvb-slot-ph" id="tvbs-ph-${i}" style="${slot?'display:none':''}">
+          <div class="tvb-slot-ph-icon">${isSelected?'👆':'📺'}</div>
+          <div class="tvb-slot-ph-txt">${isSelected?'Now pick a channel →':'Click to select &amp; focus'}</div>
+        </div>
+      </div>`;
+
+    // Re-attach saved video element or create new
+    const vw=div.querySelector('.tvb-slot-vw');
+    if(savedVids[i]){
+      vw.appendChild(savedVids[i]);
+    } else {
+      const vid=document.createElement('video');
+      vid.id='tvbs-vid-'+i;
+      vid.autoplay=true;vid.muted=true;vid.playsInline=true;vid.controls=true;
+      vid.style.cssText='display:none;width:100%;height:100%';
+      vw.appendChild(vid);
+    }
+
+    // Click = select + focus
+    div.addEventListener('click',(e)=>{
+      if(e.target.classList.contains('tvb-slot-close')){clearTVBSlot(i);return;}
+      selectTVBSlot(i);
+    });
+    // Double-click = fullscreen
+    div.querySelector('.tvb-slot-vw').addEventListener('dblclick',(e)=>{
+      e.stopPropagation();
+      const vid=document.getElementById('tvbs-vid-'+i);
+      if(vid&&vid.requestFullscreen) vid.requestFullscreen();
+    });
+
+    wrap.appendChild(div);
+  });
+
+  syncTVBMute();
+}
+
+function selectTVBSlot(i){
+  // Select as active pick target
+  tvbActiveSlot=i;
+  // Also focus sound on this slot if it has something playing
+  const vid=document.getElementById('tvbs-vid-'+i);
+  if(vid && vid.style.display!=='none'){
+    tvbFocusedSlot=i;
+  }
+  // Update all slot classes and placeholders
+  tvbSlots.forEach((_,j)=>{
+    const el=document.getElementById('tvb-slot-'+j);
+    if(!el) return;
+    el.className='tvb-slot'
+      +(tvbSlots[j]?' live':'')
+      +(j===tvbActiveSlot?' active-pick':'')
+      +(j===tvbFocusedSlot?' focused':'');
+    const ph=document.getElementById('tvbs-ph-'+j);
+    if(ph){
+      ph.querySelector('.tvb-slot-ph-icon').textContent=j===tvbActiveSlot?'👆':'📺';
+      ph.querySelector('.tvb-slot-ph-txt').innerHTML=j===tvbActiveSlot?'Now pick a channel →':'Click to select &amp; focus';
+    }
+    // Update "← active" label in header
+    const hdr=el.querySelector('.tvb-slot-hdr');
+    const activeSpan=hdr?.querySelector('span[style*="active"]');
+    if(activeSpan) activeSpan.remove();
+    if(j===tvbActiveSlot){
+      const s=document.createElement('span');
+      s.style.cssText='font-size:9px;color:var(--accent);font-family:var(--mono);flex-shrink:0';
+      s.textContent='← active';
+      hdr?.insertBefore(s, hdr.querySelector('.tvb-slot-close')||null);
+    }
+  });
+  syncTVBMute();
+}
+
+function syncTVBMute(){
+  tvbSlots.forEach((_,j)=>{
+    const vid=document.getElementById('tvbs-vid-'+j);
+    if(!vid) return;
+    vid.muted=(tvbFocusedSlot===null || j!==tvbFocusedSlot);
+  });
+}
+
+function clearTVBSlot(i){
+  // Stop HLS for this slot only — never touch others
+  const key='tvbs-'+i;
+  if(tvbHlsInst[key]){tvbHlsInst[key].destroy();delete tvbHlsInst[key];}
+  tvbSlots[i]=null;
+  if(tvbActiveSlot===i) tvbActiveSlot=null;
+  if(tvbFocusedSlot===i) tvbFocusedSlot=null;
+
+  // Surgically reset just this slot's DOM
+  const slotEl=document.getElementById('tvb-slot-'+i);
+  if(!slotEl) return;
+  slotEl.className='tvb-slot';
+
+  const nameEl=document.getElementById('tvbs-name-'+i);
+  if(nameEl){nameEl.textContent='Screen '+(i+1);nameEl.className='tvb-slot-name';}
+
+  const stEl=document.getElementById('tvbs-st-'+i);
+  if(stEl){stEl.textContent='';stEl.className='tvb-slot-st';}
+
+  // Remove close button
+  slotEl.querySelector('.tvb-slot-close')?.remove();
+  slotEl.querySelector('.active-label')?.remove();
+
+  // Reset video
+  const vid=document.getElementById('tvbs-vid-'+i);
+  if(vid){vid.style.display='none';vid.src='';}
+
+  // Show placeholder
+  const ph=document.getElementById('tvbs-ph-'+i);
+  if(ph){
+    ph.style.display='flex';
+    ph.querySelector('.tvb-slot-ph-icon').textContent='📺';
+    ph.querySelector('.tvb-slot-ph-txt').innerHTML='Click to select &amp; focus';
+  }
+
+  syncTVBMute();
+}
+
+function assignChannelToSlot(chId){
+  if(tvbActiveSlot===null){
+    tvbActiveSlot=tvbSlots.findIndex(s=>!s);
+    if(tvbActiveSlot===-1) tvbActiveSlot=0;
+  }
+  const ch=[...PINNED_FAVS,...LIST_FAVS].find(c=>c.id===chId)
+         || tvChannels.find(c=>c.id===chId);
+  if(!ch) return;
+  const flag=COUNTRY_FLAGS[ch.country]||ch.flag||'📺';
+  const name=ch.name||ch.id;
+  const i=tvbActiveSlot;
+
+  // Stop existing HLS in this slot only
+  const key='tvbs-'+i;
+  if(tvbHlsInst[key]){tvbHlsInst[key].destroy();delete tvbHlsInst[key];}
+
+  tvbSlots[i]={chId, name, flag};
+
+  // Surgical DOM update — don't touch other slots
+  const slotEl=document.getElementById('tvb-slot-'+i);
+  if(slotEl){
+    slotEl.classList.add('live');
+
+    // Update name
+    const nameEl=document.getElementById('tvbs-name-'+i);
+    if(nameEl){nameEl.textContent=flag+' '+name;nameEl.className='tvb-slot-name live';}
+
+    // Ensure close button exists in header
+    const hdr=slotEl.querySelector('.tvb-slot-hdr');
+    if(hdr&&!hdr.querySelector('.tvb-slot-close')){
+      const btn=document.createElement('button');
+      btn.className='tvb-slot-close';btn.title='Remove';btn.textContent='✕';
+      btn.onclick=(e)=>{e.stopPropagation();clearTVBSlot(i);};
+      hdr.appendChild(btn);
+    }
+
+    // Hide placeholder, show video
+    const ph=document.getElementById('tvbs-ph-'+i);
+    if(ph) ph.style.display='none';
+    const vid=document.getElementById('tvbs-vid-'+i);
+    if(vid) vid.style.display='block';
+  }
+
+  // Load stream into this slot's video (other slots untouched)
+  const urls=ch.urls||(ch._streams||[]).map(s=>s.url);
+  loadTVBStream(i, urls);
+
+  // Focus sound on this slot
+  tvbFocusedSlot=i;
+  syncTVBMute();
+
+  // Auto-advance active selection to next empty slot
+  const nextEmpty=tvbSlots.findIndex((s,j)=>j>i&&!s);
+  tvbActiveSlot=nextEmpty!==-1?nextEmpty:null;
+
+  // Update only the "← active" indicators across slots
+  tvbSlots.forEach((_,j)=>{
+    const el=document.getElementById('tvb-slot-'+j);
+    if(!el) return;
+    el.className='tvb-slot'
+      +(tvbSlots[j]?' live':'')
+      +(j===tvbActiveSlot?' active-pick':'')
+      +(j===tvbFocusedSlot?' focused':'');
+    // Sync "← active" span
+    const hdr=el.querySelector('.tvb-slot-hdr');
+    const existing=hdr?.querySelector('.active-label');
+    if(existing) existing.remove();
+    if(j===tvbActiveSlot&&hdr){
+      const s=document.createElement('span');
+      s.className='active-label';
+      s.style.cssText='font-size:9px;color:var(--accent);font-family:var(--mono);flex-shrink:0';
+      s.textContent='← active';
+      hdr.insertBefore(s,hdr.querySelector('.tvb-slot-close')||null);
+    }
+    // Update placeholder text
+    const ph=document.getElementById('tvbs-ph-'+j);
+    if(ph&&!tvbSlots[j]){
+      ph.style.display='flex';
+      ph.querySelector('.tvb-slot-ph-icon').textContent=j===tvbActiveSlot?'👆':'📺';
+      ph.querySelector('.tvb-slot-ph-txt').innerHTML=j===tvbActiveSlot?'Now pick a channel →':'Click to select &amp; focus';
+    }
+  });
+}
+
+function loadTVBStream(slotIdx, urls){
+  const key='tvbs-'+slotIdx;
+  const vid=document.getElementById('tvbs-vid-'+slotIdx);
+  const ph=document.getElementById('tvbs-ph-'+slotIdx);
+  const st=document.getElementById('tvbs-st-'+slotIdx);
+  if(!vid||!urls.length) return;
+
+  let idx=0;
+  function tryNext(){
+    if(idx>=urls.length){
+      if(st){st.textContent='✕ offline';st.className='tvb-slot-st err';}
+      if(ph) ph.style.display='flex';
+      vid.style.display='none'; return;
+    }
+    const url=urls[idx++];
+    if(st){st.textContent='…';st.className='tvb-slot-st loading';}
+    if(ph) ph.style.display='none';
+    vid.style.display='block';
+    if(tvbHlsInst[key]){tvbHlsInst[key].destroy();delete tvbHlsInst[key];}
+    if(Hls.isSupported()){
+      const hls=new Hls({enableWorker:false,lowLatencyMode:true});
+      tvbHlsInst[key]=hls; hls.loadSource(url); hls.attachMedia(vid);
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+        vid.play().catch(()=>{});
+        if(st){st.textContent='● LIVE';st.className='tvb-slot-st live';}
+        syncTVBMute();
+      });
+      hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal) tryNext();});
+    } else if(vid.canPlayType('application/vnd.apple.mpegurl')){
+      vid.src=url;
+      vid.oncanplay=()=>{vid.play().catch(()=>{});if(st){st.textContent='● LIVE';st.className='tvb-slot-st live';}};
+      vid.onerror=tryNext;
+    } else {if(st){st.textContent='N/A';st.className='tvb-slot-st err';}}
+  }
+  tryNext();
+}
+
+function initTVBrowser(){
+  if(tvbBuilt||!tvChannels.length) return;
+  tvbBuilt=true;
+
+  // Category buttons
+  const cats=[...new Set(tvChannels.flatMap(ch=>ch.categories||[]))].filter(Boolean).sort();
+  document.getElementById('tvb-cats').innerHTML=
+    ['all',...cats.slice(0,12)].map(c=>`<button class="tvb-cat ${c==='all'?'on':''}" onclick="setTVBCat('${c}',this)">${c==='all'?'All':c}</button>`).join('');
+
+  document.getElementById('tvb-q').addEventListener('input',function(){
+    tvbFilter=this.value.toLowerCase(); renderTVBPicker();
+  });
+
+  buildTVBSlots();
+  renderTVBPicker();
+}
+
+function setTVBCat(c,btn){
+  tvbCat=c==='all'?'':c;
+  document.querySelectorAll('.tvb-cat').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderTVBPicker();
+}
+
+function renderTVBPicker(){
+  const list=document.getElementById('tvb-picker-list');
+
+  // Favs first (all 6 preferred channels)
+  const favItems=[...PINNED_FAVS,...LIST_FAVS].filter(ch=>
+    !tvbFilter || ch.name.toLowerCase().includes(tvbFilter)
+  ).map(ch=>`
+    <div class="tvb-pick-item fav-item" onclick="assignChannelToSlot('${ch.id}')">
+      <div class="tvb-pick-ph">${ch.flag}</div>
+      <div style="flex:1;min-width:0">
+        <div class="tvb-pick-name">⭐ ${ch.name}</div>
+        <div class="tvb-pick-meta">Favorite</div>
+      </div>
+    </div>`).join('');
+
+  // iptv-org channels
+  const filtered=tvChannels.filter(ch=>{
+    if(tvbFilter&&!(ch.name||'').toLowerCase().includes(tvbFilter)&&!(ch.country||'').toLowerCase().includes(tvbFilter)) return false;
+    if(tvbCat&&!(ch.categories||[]).includes(tvbCat)) return false;
+    return true;
+  }).slice(0,300);
+
+  const iptvItems=filtered.map(ch=>{
+    const flag=COUNTRY_FLAGS[ch.country]||'📺';
+    const cat=(ch.categories||[])[0]||'';
+    return `<div class="tvb-pick-item" onclick="assignChannelToSlot('${ch.id.replace(/'/g,"\\'")}')">
+      ${ch.logo?`<img class="tvb-pick-logo" src="${ch.logo}" onerror="this.style.display='none'" loading="lazy"/>`:
+      `<div class="tvb-pick-ph">${flag}</div>`}
+      <div style="flex:1;min-width:0">
+        <div class="tvb-pick-name">${ch.name||'?'}</div>
+        <div class="tvb-pick-meta">${flag} ${ch.country||''} ${cat?'· '+cat:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML=favItems+iptvItems||'<div class="cmsg" style="font-size:11px">No channels found</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+initGlobe();
+initTVList();
+fetchAll();
+setInterval(fetchAll,5*60*1000);
+</script>
+</body>
+</html>
