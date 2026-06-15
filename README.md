@@ -4,8 +4,19 @@
 
 Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and a multi-stream live TV wall with 800+ channels — all in one file, no build step, no server, no npm.
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-press--radar-3ddc6e?style=for-the-badge&logo=github)](https://NameRami.github.io/press-radar/PressRadar.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Single File](https://img.shields.io/badge/Single_File-No_Build-orange?style=for-the-badge)]()
+
 ![Press Radar Dashboard](screenshot1.png)
 ![Live TV Wall](screenshot2.png)
+
+---
+
+## 🔴 [→ Open Live Demo](https://NameRami.github.io/press-radar/PressRadar.html)
+
+> No install, no login. Opens directly in your browser.
+
 ---
 
 ## ✨ Features
@@ -65,13 +76,15 @@ The TV Wall is a fully independent section below the main dashboard, designed fo
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/press-radar.git
+git clone https://github.com/NameRami/press-radar.git
 cd press-radar
 open PressRadar.html   # macOS
 # or just double-click PressRadar.html in your file manager
 ```
 
 That's it. No `npm install`. No server. No `.env` file needed for basic use.
+
+Or just use the **[live demo](https://NameRami.github.io/press-radar/PressRadar.html)** — no cloning needed.
 
 ---
 
@@ -116,7 +129,7 @@ Everything lives in `PressRadar.html` by design. This makes it trivially forkabl
 ### GitHub Pages (recommended)
 1. Fork this repo
 2. Go to **Settings → Pages → Source → main branch / root**
-3. Your dashboard is live at `https://YOUR_USERNAME.github.io/press-radar`
+3. Your dashboard is live at `https://NameRami.github.io/press-radar`
 
 ### Any static host
 Drop `PressRadar.html` on Netlify, Vercel, Cloudflare Pages, or any web server. No configuration needed.
