@@ -81,6 +81,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
 .feed-hdr-t{font-size:11px;font-weight:500;display:flex;align-items:center;gap:5px}
 .cbadge{background:var(--dim);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:999px;font-family:var(--mono)}
 
+/* ── GEO ALERTS PANEL ── */
+.geo-panel{flex-shrink:0;border-top:2px solid var(--border2);background:var(--surface);display:flex;flex-direction:column;max-height:180px;overflow:hidden;transition:max-height .2s ease}
+.geo-panel.collapsed{max-height:29px}
+.geo-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;cursor:pointer;flex-shrink:0;user-select:none}
+.geo-panel-hdr:hover{background:var(--surface2)}
+.geo-panel-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:flex;align-items:center;gap:5px}
+.geo-panel-title .geo-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.4s infinite;flex-shrink:0}
+.geo-panel-badge{font-size:9px;font-family:var(--mono);color:var(--muted)}
+.geo-panel-toggle{font-size:9px;color:var(--muted);transition:transform .2s}
+.geo-panel.collapsed .geo-panel-toggle{transform:rotate(180deg)}
+.geo-list{overflow-y:auto;flex:1;min-height:0}
+.geo-list::-webkit-scrollbar{width:3px}
+.geo-list::-webkit-scrollbar-thumb{background:var(--border2)}
+.geo-item{display:flex;align-items:center;gap:7px;padding:4px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+.geo-item:hover{background:var(--surface2)}
+.geo-item-icon{font-size:12px;flex-shrink:0}
+.geo-item-body{flex:1;min-width:0}
+.geo-item-title{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.geo-item-meta{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.geo-item-mag{font-size:10px;font-weight:700;font-family:var(--mono);flex-shrink:0;color:var(--red)}
+
 /* article card */
 .ac{padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
 .ac:hover{background:var(--surface)}.ac.sel{background:var(--surface2);border-left:2px solid var(--accent)}
@@ -98,6 +119,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
 .t-sports,.t-sport{background:rgba(50,200,200,.1);color:#32c8c8}
 .t-culture,.t-entertainment{background:rgba(255,100,200,.1);color:#ff64c8}
 .t-environment,.t-climate,.t-science{background:rgba(100,200,80,.1);color:#64c850}
+
+/* ── compact alert row (USGS / NASA) ── */
+.ac-alert{display:flex;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s;min-height:0}
+.ac-alert:hover{background:var(--surface)}
+.ac-alert-icon{font-size:13px;flex-shrink:0;line-height:1}
+.ac-alert-body{flex:1;min-width:0}
+.ac-alert-title{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);line-height:1.3}
+.ac-alert-meta{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.ac-alert-mag{font-size:10px;font-weight:700;font-family:var(--mono);flex-shrink:0;min-width:28px;text-align:right}
+
+/* alerts section header */
+.alerts-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:4}
+.alerts-hdr-t{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.alerts-hdr-c{font-size:9px;font-family:var(--mono);color:var(--muted)}
 .ago{font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:auto}
 .atit{font-size:11px;font-weight:500;line-height:1.4;margin-bottom:2px}
 .adsc{font-size:10px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -309,6 +344,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
         <div class="feed-hdr-t">Headlines <span class="cbadge" id="fc">0</span></div>
       </div>
       <div id="art-con"><div class="cmsg">Loading…</div></div>
+    </div>
+
+    <!-- GEO ALERTS PANEL -->
+    <div class="geo-panel" id="geo-panel">
+      <div class="geo-panel-hdr" onclick="toggleGeoPanel()">
+        <div class="geo-panel-title"><div class="geo-dot"></div>Geo Alerts <span class="geo-panel-badge" id="geo-count">0</span></div>
+        <span class="geo-panel-toggle">▲</span>
+      </div>
+      <div class="geo-list" id="geo-list"></div>
     </div>
   </div>
 
@@ -529,6 +573,7 @@ async function fetchAll(){
   await Promise.allSettled([fetchGuardian(),fetchGNews(),fetchNewsdata(),fetchRSSFeeds(),fetchHN(),fetchUSGS(),fetchNASA()]);
   applyFilter();updateStats();document.getElementById('live-ind').textContent='LIVE';
   updateGlobeAlerts();
+  renderGeoAlerts();
 }
 
 // ── CLOCK ──
@@ -786,14 +831,49 @@ function applyFilter(){
 function renderNews(){
   const c=document.getElementById('art-con');
   if(!filtered.length){c.innerHTML='<div class="cmsg">No articles</div>';return;}
-  c.innerHTML=filtered.map((a,i)=>{
+
+  // News articles only — alerts go in geo panel below
+  const news=filtered.filter(a=>a._s!=='usgs'&&a._s!=='nasa');
+
+  c.innerHTML=news.length ? news.map((a,_i)=>{
+    const globalIdx=filtered.indexOf(a);
     const cats=(a.category||[]).slice(0,2).map(ct=>`<span class="ctag t-${ct.toLowerCase().replace(/[^a-z]/g,'-')}">${ct}</span>`).join('');
-    return `<div class="ac ${selIdx===i?'sel':''}" onclick="selArt(${i})">
+    return `<div class="ac ${selIdx===globalIdx?'sel':''}" onclick="selArt(${globalIdx})">
       <div class="acm"><span class="abadge ${SRC_CLS[a._s]||''}">${SRC_NM[a._s]||a._s}</span><span class="abadge" style="background:rgba(255,255,255,.05);color:var(--muted)">${(a.source_id||'').substring(0,14)}</span>${cats}<span class="ago">${ago(a.pubDate)}</span></div>
       <div class="atit">${(a.title||'').replace(/</g,'&lt;')}</div>
       ${a.description?`<div class="adsc">${a.description.replace(/</g,'&lt;').substring(0,110)}…</div>`:''}
     </div>`;
+  }).join('') : '<div class="cmsg">No articles</div>';
+
+  renderGeoAlerts();
+}
+
+function renderGeoAlerts(){
+  const alerts=allArticles.filter(a=>a._s==='usgs'||a._s==='nasa');
+  const geoList=document.getElementById('geo-list');
+  const geoCount=document.getElementById('geo-count');
+  if(!geoList) return;
+  if(geoCount) geoCount.textContent=alerts.length||'';
+  if(!alerts.length){geoList.innerHTML='<div class="cmsg" style="font-size:10px;padding:10px">No active alerts</div>';return;}
+  geoList.innerHTML=alerts.map((a,i)=>{
+    const isQuake=a._s==='usgs';
+    const icon=isQuake?'🌍':'🛰';
+    const mag=a._mag?`M${a._mag}`:'';
+    const place=(a.title||'').replace(/^[🌍🛰]\s*/u,'').replace(/^M[\d.]+ Earthquake — /,'').replace(/.*— /,'');
+    const metaColor=isQuake?'var(--red)':'#ff9632';
+    return `<div class="geo-item" onclick="if(allArticles[${allArticles.indexOf(a)}]?.link)window.open(allArticles[${allArticles.indexOf(a)}].link,'_blank')">
+      <div class="geo-item-icon">${icon}</div>
+      <div class="geo-item-body">
+        <div class="geo-item-title">${place.replace(/</g,'&lt;')}</div>
+        <div class="geo-item-meta" style="color:${metaColor}">${isQuake?'USGS':'NASA EONET'} · ${ago(a.pubDate)}</div>
+      </div>
+      ${mag?`<div class="geo-item-mag">${mag}</div>`:''}
+    </div>`;
   }).join('');
+}
+
+function toggleGeoPanel(){
+  document.getElementById('geo-panel').classList.toggle('collapsed');
 }
 
 function selArt(i){
