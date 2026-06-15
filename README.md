@@ -67,8 +67,8 @@ The TV Wall is a fully independent section below the main dashboard, designed fo
 ```bash
 git clone https://github.com/YOUR_USERNAME/press-radar.git
 cd press-radar
-open index.html   # macOS
-# or just double-click index.html in your file manager
+open PressRadar.html   # macOS
+# or just double-click PressRadar.html in your file manager
 ```
 
 That's it. No `npm install`. No server. No `.env` file needed for basic use.
@@ -99,7 +99,7 @@ Click **⚙ Keys** in the top bar to enter your keys. They are stored in your br
 
 ```
 press-radar/
-├── index.html          # The entire application — HTML + CSS + JS
+├── PressRadar.html          # The entire application — HTML + CSS + JS
 ├── README.md
 ├── LICENSE
 ├── CONTRIBUTING.md
@@ -107,7 +107,7 @@ press-radar/
     └── screenshot.png
 ```
 
-Everything lives in `index.html` by design. This makes it trivially forkable, hostable on GitHub Pages, and auditable — you can read the entire codebase in one file.
+Everything lives in `PressRadar.html` by design. This makes it trivially forkable, hostable on GitHub Pages, and auditable — you can read the entire codebase in one file.
 
 ---
 
@@ -119,7 +119,7 @@ Everything lives in `index.html` by design. This makes it trivially forkable, ho
 3. Your dashboard is live at `https://YOUR_USERNAME.github.io/press-radar`
 
 ### Any static host
-Drop `index.html` on Netlify, Vercel, Cloudflare Pages, or any web server. No configuration needed.
+Drop `PressRadar.html` on Netlify, Vercel, Cloudflare Pages, or any web server. No configuration needed.
 
 ### Local
 Just open the file. Most features work from `file://` — some browsers restrict certain fetch calls from local files, in which case serve it with any local server:
