@@ -4,7 +4,7 @@
 
 Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and a multi-stream live TV wall with 800+ channels — all in one file, no build step, no server, no npm.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-press--radar-3ddc6e?style=for-the-badge&logo=github)](https://NameRami.github.io/press-radar/PressRadar.html)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-press--radar-3ddc6e?style=for-the-badge&logo=github)](https://github.com/PressRadar/PressRadar.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Single File](https://img.shields.io/badge/Single_File-No_Build-orange?style=for-the-badge)]()
 
@@ -13,7 +13,7 @@ Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and 
 
 ---
 
-## 🔴 [→ Open Live Demo](https://NameRami.github.io/press-radar/PressRadar.html)
+## 🔴 [→ Open Live Demo](https://github.com/PressRadar/PressRadar.html)
 
 > No install, no login. Opens directly in your browser.
 
@@ -84,7 +84,7 @@ open PressRadar.html   # macOS
 
 That's it. No `npm install`. No server. No `.env` file needed for basic use.
 
-Or just use the **[live demo](https://NameRami.github.io/press-radar/PressRadar.html)** — no cloning needed.
+Or just use the **[live demo](https://github.com/PressRadar/PressRadar.html)** — no cloning needed.
 
 ---
 
