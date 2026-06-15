@@ -2,10 +2,10 @@
 
 **Real-time global news intelligence in a single HTML file.**
 
-Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and a multi-stream live TV wall — all in one file, no build step, no server, no npm.
+Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and a multi-stream live TV wall with 800+ channels — all in one file, no build step, no server, no npm.
 
-![Press Radar Dashboard](image1.png)
-
+![Press Radar Dashboard](screenshot1.png)
+![Live TV Wall](screenshot2.png)
 ---
 
 ## ✨ Features
@@ -29,14 +29,33 @@ Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and 
 - Drag to rotate, scroll to zoom, toggle auto-rotation
 
 ### 📺 Live TV Wall
-- **3 always-on pinned streams** (Bloomberg TV, Sky News, Euronews)
-- **TV Browser** — 2 / 4 / 6 screen multi-view layout
-- Browse and assign channels from the iptv-org community playlist (thousands of channels)
-- Filter by category, search by name
-- HLS streaming via hls.js with automatic fallback
+
+> **Watch up to 6 live news streams simultaneously** — pick your layout, assign any channel to any slot, switch on the fly.
+
+The TV Wall is a fully independent section below the main dashboard, designed for multi-source broadcast monitoring:
+
+| Layout | Screens | Best for |
+|--------|---------|----------|
+| **2×1** | 2 streams side by side | Quick A/B comparison |
+| **2×2** | 4 streams in a grid | Standard newsroom view |
+| **2×3** | 6 streams in a grid | Full multi-source monitoring |
+
+**How it works:**
+1. Click a screen slot to make it active
+2. Pick any channel from the right-side browser — it loads instantly
+3. Switch layouts at any time without losing running streams
+4. Close individual slots independently
+
+**What's included:**
+- **3 always-on pinned streams** auto-start at the top: Bloomberg TV 🇺🇸, Sky News 🇬🇧, Euronews 🇪🇺
+- **6 favourite channels** always visible at the top of the picker: + DW 🇩🇪, France 24 🇫🇷, Al Jazeera 🇶🇦
+- **800+ channels** from the [iptv-org](https://github.com/iptv-org/iptv) community playlist — filter by category (News, Sports, Entertainment…) or search by name
+- **HLS streaming** via hls.js with automatic URL fallback if a stream goes offline
+- **Per-slot status indicators** — `● LIVE`, `… loading`, `✕ offline`
+- Global mute control
 
 ### 🎨 UI
-- Dark / Light theme toggle — preference saved to localStorage
+- Dark / Light theme toggle — swaps both the interface and the globe texture, preference saved to localStorage
 - Stats bar (article count, outlet count, last-hour activity)
 - Live UTC clock
 - BYOK (bring your own keys) modal for paid API tiers
@@ -124,7 +143,7 @@ python3 -m http.server 8080
 | Defence | Defense News | Global |
 | Earthquakes | USGS Significant Earthquakes | Global, real-time |
 | Natural events | NASA EONET | Global, real-time |
-| Live TV | iptv-org community playlist | 100+ countries |
+| Live TV | iptv-org community playlist | 800+ channels, 100+ countries |
 | Country borders | world-atlas TopoJSON (Natural Earth) | 195 countries |
 
 ---
