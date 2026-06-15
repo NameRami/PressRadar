@@ -4,7 +4,7 @@
 
 Live news feeds, a WebGL 3D globe with earthquake and natural event alerts, and a multi-stream live TV wall — all in one file, no build step, no server, no npm.
 
-![Press Radar Dashboard](docs/screenshot.png)
+![Press Radar Dashboard](docs/image1.png)
 
 ---
 
